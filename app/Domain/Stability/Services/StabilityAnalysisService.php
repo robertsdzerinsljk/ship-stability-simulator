@@ -7,10 +7,10 @@ use App\Models\Vessel;
 
 class StabilityAnalysisService
 {
-    public function build(Vessel $vessel, ?CargoPlan $cargoPlan): array
+    public function build(Vessel $vessel, ?CargoPlan $cargoPlan, $ballastTanksOverride = null): array
     {
         $cargoItems = $cargoPlan?->items ?? collect();
-        $ballastTanks = $vessel->ballastTanks;
+        $ballastTanks = $ballastTanksOverride ?? $vessel->ballastTanks;
         $limits = $vessel->limits;
 
         $cargoWeight = (float) $cargoItems->sum('weight_tonnes');
@@ -53,7 +53,7 @@ class StabilityAnalysisService
         $tcg = $transverseMoment / $totalWeight;
 
         $km = (float) ($vessel->km_default ?? 0);
-        $freeSurfaceCorrection = $this->calculateFreeSurfaceCorrection($vessel, $totalWeight);
+        $freeSurfaceCorrection = $this->calculateFreeSurfaceCorrection($ballastTanks, $totalWeight);
         $gm = $km - $kg - $freeSurfaceCorrection;
 
         $lpp = max((float) ($vessel->length_between_perpendiculars ?? $vessel->length_overall ?? 1), 1);
@@ -98,7 +98,7 @@ class StabilityAnalysisService
             foreDraft: $foreDraft,
             aftDraft: $aftDraft,
             holdLoads: $holdLoads->toArray(),
-            freeSurfaceCount: $this->freeSurfaceTankCount($vessel),
+            freeSurfaceCount: $this->freeSurfaceTankCount($ballastTanks),
             gzSummary: $gzSummary,
             limits: $limits,
         );
@@ -155,11 +155,11 @@ class StabilityAnalysisService
         ];
     }
 
-    private function calculateFreeSurfaceCorrection(Vessel $vessel, float $totalWeight): float
+    private function calculateFreeSurfaceCorrection($ballastTanks, float $totalWeight): float
     {
         $correction = 0;
 
-        foreach ($vessel->ballastTanks as $tank) {
+        foreach ($ballastTanks as $tank) {
             $capacity = max((float) $tank->capacity_tonnes, 1);
             $current = (float) $tank->current_tonnes;
             $fillPercent = ($current / $capacity) * 100;
@@ -172,9 +172,9 @@ class StabilityAnalysisService
         return $correction / max($totalWeight, 1);
     }
 
-    private function freeSurfaceTankCount(Vessel $vessel): int
+    private function freeSurfaceTankCount($ballastTanks): int
     {
-        return $vessel->ballastTanks
+        return collect($ballastTanks)
             ->filter(function ($tank) {
                 $capacity = max((float) $tank->capacity_tonnes, 1);
                 $current = (float) $tank->current_tonnes;
@@ -191,9 +191,6 @@ class StabilityAnalysisService
 
         for ($angle = 0; $angle <= 80; $angle += 5) {
             $radians = deg2rad($angle);
-
-            // Vienkāršots mācību modelis: sākotnējā stabilitāte balstīta uz GM,
-            // bet lielākos leņķos līkne pakāpeniski samazinās.
             $shapeFactor = max(0, 1 - ($angle / 120));
             $gz = max(0, $gm * sin($radians) * $shapeFactor);
 

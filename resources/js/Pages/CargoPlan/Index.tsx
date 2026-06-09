@@ -130,7 +130,12 @@ function SummaryCard({
         </div>
     );
 }
-
+function formatNumber(value: number | string | null | undefined, digits = 2) {
+    return Number(value ?? 0).toLocaleString('lv-LV', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+}
 function EditableCargoRow({ item }: { item: CargoPlanItem }) {
     const [cargoName, setCargoName] = useState(item.cargo_name);
     const [weightTonnes, setWeightTonnes] = useState(String(item.weight_tonnes));
@@ -306,32 +311,32 @@ export default function CargoPlanIndex({
                         </div>
                     </div>
                 </div>
-
+                
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryCard
                         title="Kopējā krava"
-                        value={`${summary.total_cargo.toLocaleString('lv-LV')} t`}
-                        description={`DWT: ${vessel.dwt.toLocaleString('lv-LV')} t`}
+                        value={`${formatNumber(summary.total_cargo)} t`}
+                        description={`DWT: ${formatNumber(vessel.dwt)} t`}
                         icon={PackageOpen}
                     />
 
                     <SummaryCard
                         title="Tilpņu noslodze"
                         value={`${summary.load_percent}%`}
-                        description={`${summary.total_capacity.toLocaleString('lv-LV')} t kopējā tilpņu kapacitāte`}
+                        description={`${formatNumber(summary.total_capacity)} t kopējā tilpņu kapacitāte`}
                         icon={TrendingUp}
                     />
 
                     <SummaryCard
                         title="Tilpņu skaits"
-                        value={`${summary.holds_count}`}
+                        value={`${formatNumber(summary.holds_count)}`}
                         description="Aktīvajā kuģa konfigurācijā"
                         icon={Ship}
                     />
 
                     <SummaryCard
                         title="Brīdinājumi"
-                        value={`${summary.warnings_count}`}
+                        value={`${formatNumber(summary.warnings_count)}`}
                         description={
                             summary.warnings_count > 0
                                 ? 'Ir tilpnes ar augstu noslodzi'

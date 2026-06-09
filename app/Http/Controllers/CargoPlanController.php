@@ -3,33 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\CargoPlanItem;
-use App\Models\Vessel;
+use App\Support\ActiveAssignmentSolution;
+use App\Support\ActiveVessel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Support\ActiveVessel;
 
 class CargoPlanController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $vessel = ActiveVessel::query(request())
-            ->with([
-                'compartments',
-                'cargoPlans' => function ($query) {
-                    $query->where('status', 'active')->latest();
-                },
-                'cargoPlans.items.cargoType',
-                'cargoPlans.items.compartment',
-            ])
-            ->firstOrFail();
+        $solution = ActiveAssignmentSolution::current($request);
 
-        $cargoPlan = $vessel->cargoPlans->first();
+        if ($solution) {
+            $vessel = $solution->vessel;
+            $cargoPlan = $solution->cargoPlan;
+        } else {
+            $vessel = ActiveVessel::query($request)
+                ->with([
+                    'compartments',
+                    'cargoPlans' => function ($query) {
+                        $query->where('status', 'active')->latest();
+                    },
+                    'cargoPlans.items.cargoType',
+                    'cargoPlans.items.compartment',
+                ])
+                ->firstOrFail();
 
-        $items = $vessel->compartments->map(function ($compartment) use ($cargoPlan) {
-            $item = $cargoPlan?->items
-                ->firstWhere('vessel_compartment_id', $compartment->id);
+            $cargoPlan = $vessel->cargoPlans->first();
+        }
+
+        $items = $cargoPlan?->items ?? collect();
+
+        $rows = $vessel->compartments->map(function ($compartment) use ($items) {
+            $item = $items->firstWhere('vessel_compartment_id', $compartment->id);
 
             $weight = (float) ($item?->weight_tonnes ?? 0);
             $capacity = max((float) $compartment->capacity_tonnes, 1);
@@ -38,57 +46,68 @@ class CargoPlanController extends Controller
             return [
                 'id' => $item?->id,
                 'compartment_id' => $compartment->id,
-                'hold_name' => $compartment->name,
-                'hold_code' => $compartment->code,
-                'cargo_name' => $item?->cargo_name ?? 'Nav kravas',
-                'cargo_type' => $item?->cargoType?->name,
+                'compartment_name' => $compartment->name,
+                'compartment_code' => $compartment->code,
+                'cargo_type_name' => $item?->cargoType?->name ?? '-',
+                'cargo_name' => $item?->cargo_name ?? '',
                 'weight_tonnes' => round($weight, 2),
                 'volume_m3' => round((float) ($item?->volume_m3 ?? 0), 2),
                 'capacity_tonnes' => round($capacity, 2),
-                'capacity_m3' => round((float) $compartment->capacity_m3, 2),
                 'load_percent' => round($loadPercent, 1),
+                'loading_port' => $item?->loading_port ?? '',
+                'discharge_port' => $item?->discharge_port ?? '',
+                'priority' => $item?->priority ?? 1,
+                'status' => $item?->status ?? 'planned',
                 'lcg' => round((float) $compartment->lcg, 2),
                 'vcg' => round((float) $compartment->vcg, 2),
                 'tcg' => round((float) $compartment->tcg, 2),
-                'loading_port' => $item?->loading_port,
-                'discharge_port' => $item?->discharge_port,
-                'status' => $this->statusForLoad($loadPercent),
             ];
         })->values();
 
-        $totalCargo = $items->sum('weight_tonnes');
-        $totalCapacity = max($items->sum('capacity_tonnes'), 1);
+        $totalCargo = (float) $rows->sum('weight_tonnes');
+        $totalCapacity = max((float) $rows->sum('capacity_tonnes'), 1);
+        $warningsCount = $rows->filter(fn (array $row) => $row['load_percent'] >= 90)->count();
 
         return Inertia::render('CargoPlan/Index', [
             'cargoPlan' => [
                 'id' => $cargoPlan?->id,
-                'name' => $cargoPlan?->name ?? 'Nav aktīva kravas plāna',
+                'name' => $cargoPlan?->name ?? 'Nav kravas plāna',
                 'mode' => $cargoPlan?->mode ?? 'training',
-                'status' => $cargoPlan?->status ?? 'draft',
+                'status' => $cargoPlan?->status ?? 'active',
             ],
             'vessel' => [
                 'id' => $vessel->id,
                 'name' => $vessel->name,
                 'type' => $vessel->type,
                 'imo_number' => $vessel->imo_number,
-                'dwt' => round((float) $vessel->dwt, 2),
             ],
             'summary' => [
                 'total_cargo' => round($totalCargo, 2),
                 'total_capacity' => round($totalCapacity, 2),
                 'load_percent' => round(($totalCargo / $totalCapacity) * 100, 1),
-                'holds_count' => $items->count(),
-                'warnings_count' => $items->filter(fn ($item) => $item['load_percent'] >= 90)->count(),
+                'holds_count' => $rows->count(),
+                'warnings_count' => $warningsCount,
             ],
-            'items' => $items,
+            'items' => $rows->toArray(),
+            'workspace' => $solution ? [
+                'assignment_id' => $solution->assignment_id,
+                'solution_id' => $solution->id,
+                'mode' => 'student_solution',
+            ] : null,
         ]);
     }
 
     public function updateItem(Request $request, CargoPlanItem $cargoPlanItem): RedirectResponse
     {
+        $solution = ActiveAssignmentSolution::current($request);
+
+        if ($solution) {
+            abort_unless($cargoPlanItem->cargo_plan_id === $solution->solution_cargo_plan_id, 403);
+        }
+
         $validated = $request->validate([
-            'weight_tonnes' => ['required', 'numeric', 'min:0'],
             'cargo_name' => ['required', 'string', 'max:255'],
+            'weight_tonnes' => ['required', 'numeric', 'min:0'],
             'loading_port' => ['nullable', 'string', 'max:255'],
             'discharge_port' => ['nullable', 'string', 'max:255'],
         ]);
@@ -96,37 +115,16 @@ class CargoPlanController extends Controller
         $cargoPlanItem->load('cargoType');
 
         $density = max((float) ($cargoPlanItem->cargoType?->density ?? 1), 0.1);
-        $volume = (float) $validated['weight_tonnes'] / $density;
+        $weight = (float) $validated['weight_tonnes'];
 
         $cargoPlanItem->update([
             'cargo_name' => $validated['cargo_name'],
-            'weight_tonnes' => $validated['weight_tonnes'],
-            'volume_m3' => round($volume, 2),
+            'weight_tonnes' => $weight,
+            'volume_m3' => round($weight / $density, 2),
             'loading_port' => $validated['loading_port'] ?? null,
             'discharge_port' => $validated['discharge_port'] ?? null,
         ]);
 
-        return back()->with('success', 'Kravas plāna rinda atjaunināta.');
-    }
-
-    private function statusForLoad(float $loadPercent): string
-    {
-        if ($loadPercent > 100) {
-            return 'Pārslogots';
-        }
-
-        if ($loadPercent >= 95) {
-            return 'Pilns';
-        }
-
-        if ($loadPercent >= 85) {
-            return 'Brīdinājums';
-        }
-
-        if ($loadPercent >= 65) {
-            return 'Pieņemams';
-        }
-
-        return 'Labi';
+        return back()->with('success', 'Kravas rinda atjaunināta.');
     }
 }

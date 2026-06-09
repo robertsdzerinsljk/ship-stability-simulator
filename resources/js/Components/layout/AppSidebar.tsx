@@ -1,27 +1,29 @@
 import { Link, usePage } from '@inertiajs/react';
+import { type PageProps } from '@/types';
 import {
     Activity,
+    BarChart3,
+    ClipboardCheck,
     ClipboardList,
     FileText,
+    GraduationCap,
     LayoutDashboard,
     LogOut,
     PackageOpen,
     Settings,
     Ship,
     Waves,
-    BarChart3,
-    ClipboardCheck,
-    GraduationCap,
     X,
 } from 'lucide-react';
-import type { 
-    LucideIcon,
- } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+type Role = 'student' | 'teacher' | 'admin';
 
 type NavItem = {
     label: string;
     href: string;
     icon: LucideIcon;
+    roles: Role[];
 };
 
 type AppSidebarProps = {
@@ -34,58 +36,68 @@ const navigation: NavItem[] = [
         label: 'Pārskats',
         href: '/dashboard',
         icon: LayoutDashboard,
+        roles: ['student', 'teacher', 'admin'],
     },
     {
         label: 'Mani uzdevumi',
         href: '/student/tasks',
         icon: ClipboardCheck,
+        roles: ['student', 'admin'],
+    },
+    {
+        label: 'Kuģi',
+        href: '/vessels',
+        icon: Ship,
+        roles: ['teacher', 'admin'],
     },
     {
         label: 'Scenāriji',
         href: '/scenarios',
         icon: ClipboardList,
-    },
-    {
-    label: 'Iesniegumi',
-    href: '/teacher/submissions',
-    icon: GraduationCap,
-    },
-    {
-    label: 'Analītika',
-    href: '/teacher/analytics',
-    icon: BarChart3,
-    },
-    {
-        label: 'Kuģis',
-        href: '/vessels',
-        icon: Ship,
+        roles: ['teacher', 'admin'],
     },
     {
         label: 'Kravas plāns',
         href: '/cargo-plan',
         icon: PackageOpen,
+        roles: ['student', 'teacher', 'admin'],
     },
     {
         label: 'Balasts',
         href: '/ballast',
         icon: Waves,
+        roles: ['student', 'teacher', 'admin'],
     },
     {
         label: 'Stabilitāte',
         href: '/stability',
         icon: Activity,
+        roles: ['student', 'teacher', 'admin'],
     },
     {
         label: 'Atskaites',
         href: '/reports',
         icon: FileText,
+        roles: ['student', 'teacher', 'admin'],
+    },
+    {
+        label: 'Iesniegumi',
+        href: '/teacher/submissions',
+        icon: GraduationCap,
+        roles: ['teacher', 'admin'],
+    },
+    {
+        label: 'Analītika',
+        href: '/teacher/analytics',
+        icon: BarChart3,
+        roles: ['teacher', 'admin'],
     },
     {
         label: 'Iestatījumi',
         href: '/settings',
         icon: Settings,
+        roles: ['admin'],
     },
-
 ];
 
 function isActive(currentPath: string, href: string) {
@@ -97,8 +109,20 @@ function isActive(currentPath: string, href: string) {
 }
 
 export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
-    const { url } = usePage();
+    const { url, props } = usePage<PageProps>();
     const currentPath = url.split('?')[0];
+
+    const userRoles = props.auth?.user?.roles ?? [];
+
+    const canSee = (item: NavItem) => {
+        if (userRoles.includes('admin')) {
+            return true;
+        }
+
+        return item.roles.some((role) => userRoles.includes(role));
+    };
+
+    const visibleNavigation = navigation.filter(canSee);
 
     const sidebarContent = (
         <>
@@ -122,13 +146,14 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
                     type="button"
                     onClick={onClose}
                     className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+                    aria-label="Aizvērt izvēlni"
                 >
                     <X className="h-5 w-5" />
                 </button>
             </div>
 
             <nav className="flex-1 space-y-1 px-3 py-4">
-                {navigation.map((item) => {
+                {visibleNavigation.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(currentPath, item.href);
 

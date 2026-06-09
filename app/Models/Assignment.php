@@ -48,4 +48,8 @@ class Assignment extends Model
     {
         return $this->hasOne(Submission::class);
     }
+    public function solution(): HasOne
+    {
+    return $this->hasOne(AssignmentSolution::class);
+    }
 }

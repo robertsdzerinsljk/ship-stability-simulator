@@ -13,46 +13,51 @@ import {
 import { FormEvent, useState } from 'react';
 
 type Vessel = {
-    id: number;
-    name: string;
+    id?: number;
+    name?: string;
     type?: string;
     imo_number?: string;
 };
 
 type Summary = {
-    total_ballast: number;
-    total_capacity: number;
-    fill_percent: number;
-    port_tonnes: number;
-    starboard_tonnes: number;
-    center_tonnes: number;
-    imbalance_tonnes: number;
-    free_surface_count: number;
-    tanks_count: number;
-    balance_status: string;
+    total_ballast?: number | string | null;
+    total_capacity?: number | string | null;
+    fill_percent?: number | string | null;
+    port_tonnes?: number | string | null;
+    starboard_tonnes?: number | string | null;
+    center_tonnes?: number | string | null;
+    imbalance_tonnes?: number | string | null;
+    free_surface_count?: number | string | null;
+    tanks_count?: number | string | null;
+    balance_status?: string | null;
 };
 
 type BallastTank = {
     id: number;
-    name: string;
-    code: string;
-    side: 'port' | 'starboard' | 'center' | string;
-    capacity_tonnes: number;
-    capacity_m3: number;
-    current_tonnes: number;
-    fill_percent: number;
-    lcg: number;
-    vcg: number;
-    tcg: number;
-    free_surface_coefficient: number;
-    free_surface_risk: boolean;
-    status: string;
+    name?: string;
+    code?: string;
+    side?: 'port' | 'starboard' | 'center' | string;
+    capacity_tonnes?: number | string | null;
+    capacity_m3?: number | string | null;
+    current_tonnes?: number | string | null;
+    fill_percent?: number | string | null;
+    lcg?: number | string | null;
+    vcg?: number | string | null;
+    tcg?: number | string | null;
+    free_surface_coefficient?: number | string | null;
+    free_surface_risk?: boolean;
+    status?: string;
 };
 
 type BallastIndexProps = {
-    vessel: Vessel;
-    summary: Summary;
-    tanks: BallastTank[];
+    vessel?: Vessel;
+    summary?: Summary;
+    tanks?: BallastTank[];
+    workspace?: {
+        assignment_id: number;
+        solution_id: number;
+        mode: string;
+    } | null;
 };
 
 type BallastPageProps = PageProps<{
@@ -63,7 +68,20 @@ type BallastPageProps = PageProps<{
     errors?: Record<string, string>;
 }>;
 
-function sideLabel(side: string) {
+function toNumber(value: number | string | null | undefined) {
+    const number = Number(value ?? 0);
+
+    return Number.isFinite(number) ? number : 0;
+}
+
+function formatNumber(value: number | string | null | undefined, digits = 2) {
+    return toNumber(value).toLocaleString('lv-LV', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+}
+
+function sideLabel(side?: string) {
     if (side === 'port') {
         return 'Kreisais borts';
     }
@@ -75,16 +93,36 @@ function sideLabel(side: string) {
     return 'Centrs';
 }
 
-function statusBadge(status: string) {
-    if (status === 'Pārsniegts') {
+function statusLabel(status?: string) {
+    if (status === 'empty') {
+        return 'Tukšs';
+    }
+
+    if (status === 'partial') {
+        return 'Daļēji piepildīts';
+    }
+
+    if (status === 'full') {
+        return 'Pilns';
+    }
+
+    if (status === 'overloaded') {
+        return 'Pārsniegts';
+    }
+
+    return status ?? 'Nav datu';
+}
+
+function statusBadge(status?: string) {
+    if (status === 'overloaded' || status === 'Pārsniegts') {
         return 'bg-red-50 text-red-700 ring-red-100';
     }
 
-    if (status === 'Daļēji piepildīts') {
+    if (status === 'partial' || status === 'Daļēji piepildīts') {
         return 'bg-amber-50 text-amber-700 ring-amber-100';
     }
 
-    if (status === 'Pilns') {
+    if (status === 'full' || status === 'Pilns') {
         return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
     }
 
@@ -136,7 +174,13 @@ function SummaryCard({
 }
 
 function BallastTankRow({ tank }: { tank: BallastTank }) {
-    const [currentTonnes, setCurrentTonnes] = useState(String(tank.current_tonnes));
+    const capacityTonnes = toNumber(tank.capacity_tonnes);
+    const capacityM3 = toNumber(tank.capacity_m3);
+    const current = toNumber(tank.current_tonnes);
+    const fillPercent = toNumber(tank.fill_percent);
+    const safeFillPercent = Math.min(Math.max(fillPercent, 0), 100);
+
+    const [currentTonnes, setCurrentTonnes] = useState(String(current));
     const [saving, setSaving] = useState(false);
 
     const submit = (event: FormEvent) => {
@@ -159,8 +203,8 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
     return (
         <tr className="border-b border-slate-100 align-top last:border-0">
             <td className="whitespace-nowrap px-4 py-4">
-                <div className="font-semibold text-slate-950">{tank.code}</div>
-                <div className="text-xs text-slate-500">{tank.name}</div>
+                <div className="font-semibold text-slate-950">{tank.code ?? '-'}</div>
+                <div className="text-xs text-slate-500">{tank.name ?? '-'}</div>
             </td>
 
             <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-700">
@@ -171,7 +215,7 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
                 <input
                     type="number"
                     min="0"
-                    max={tank.capacity_tonnes}
+                    max={capacityTonnes}
                     step="0.01"
                     value={currentTonnes}
                     onChange={(event) => setCurrentTonnes(event.target.value)}
@@ -179,37 +223,37 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
                 />
 
                 <p className="mt-1 text-xs text-slate-500">
-                    Max: {tank.capacity_tonnes.toLocaleString('lv-LV')} t
+                    Max: {formatNumber(capacityTonnes)} t
                 </p>
             </td>
 
             <td className="min-w-[190px] px-4 py-4">
                 <div className="mb-2 flex items-center justify-between text-xs">
                     <span className="font-medium text-slate-600">
-                        {tank.fill_percent}%
+                        {formatNumber(fillPercent, 1)}%
                     </span>
 
                     <span className={`rounded-full px-2 py-1 ring-1 ${statusBadge(tank.status)}`}>
-                        {tank.status}
+                        {statusLabel(tank.status)}
                     </span>
                 </div>
 
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                     <div
-                        className={`h-full rounded-full ${fillBarColor(tank.fill_percent)}`}
-                        style={{ width: `${Math.min(tank.fill_percent, 100)}%` }}
+                        className={`h-full rounded-full ${fillBarColor(fillPercent)}`}
+                        style={{ width: `${safeFillPercent}%` }}
                     />
                 </div>
             </td>
 
             <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-700">
-                {tank.capacity_m3.toLocaleString('lv-LV')} m³
+                {formatNumber(capacityM3)} m³
             </td>
 
             <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-500">
-                <div>LCG: {tank.lcg}</div>
-                <div>VCG: {tank.vcg}</div>
-                <div>TCG: {tank.tcg}</div>
+                <div>LCG: {formatNumber(tank.lcg, 2)}</div>
+                <div>VCG: {formatNumber(tank.vcg, 2)}</div>
+                <div>TCG: {formatNumber(tank.tcg, 2)}</div>
             </td>
 
             <td className="min-w-[170px] px-4 py-4">
@@ -258,37 +302,48 @@ function TankMiniMap({ tanks }: { tanks: BallastTank[] }) {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {tanks.map((tank) => (
-                    <div
-                        key={tank.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-950">
-                                    {tank.code}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    {sideLabel(tank.side)}
-                                </p>
+                {tanks.map((tank) => {
+                    const fillPercent = toNumber(tank.fill_percent);
+                    const safeFillPercent = Math.min(Math.max(fillPercent, 0), 100);
+
+                    return (
+                        <div
+                            key={tank.id}
+                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-950">
+                                        {tank.code ?? '-'}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        {sideLabel(tank.side)}
+                                    </p>
+                                </div>
+
+                                <span className="text-sm font-semibold text-slate-700">
+                                    {formatNumber(fillPercent, 1)}%
+                                </span>
                             </div>
 
-                            <span className="text-sm font-semibold text-slate-700">
-                                {tank.fill_percent}%
-                            </span>
-                        </div>
-
-                        <div className="h-20 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
-                            <div className="flex h-full items-end">
-                                <div
-                                    className={`w-full ${fillBarColor(tank.fill_percent)}`}
-                                    style={{ height: `${Math.min(tank.fill_percent, 100)}%` }}
-                                />
+                            <div className="h-20 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+                                <div className="flex h-full items-end">
+                                    <div
+                                        className={`w-full ${fillBarColor(fillPercent)}`}
+                                        style={{ height: `${safeFillPercent}%` }}
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
+
+            {tanks.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
+                    Šim risinājumam pašlaik nav balasta tanku datu.
+                </div>
+            )}
         </div>
     );
 }
@@ -297,11 +352,39 @@ export default function BallastIndex({
     vessel,
     summary,
     tanks,
+    workspace,
 }: BallastIndexProps) {
     const { props } = usePage<BallastPageProps>();
     const success = props.flash?.success;
     const error = props.flash?.error;
     const validationError = props.errors?.current_tonnes;
+
+    const vesselData = {
+        id: 0,
+        name: 'Nav izvēlēts kuģis',
+        type: '',
+        imo_number: null,
+        ...vessel,
+    };
+
+    const summaryData = {
+        total_ballast: 0,
+        total_capacity: 0,
+        fill_percent: 0,
+        port_tonnes: 0,
+        starboard_tonnes: 0,
+        center_tonnes: 0,
+        imbalance_tonnes: 0,
+        free_surface_count: 0,
+        tanks_count: 0,
+        balance_status: 'Nav datu',
+        ...summary,
+    };
+
+    const tankRows = Array.isArray(tanks) ? tanks : [];
+    const imbalance = toNumber(summaryData.imbalance_tonnes);
+    const freeSurfaceCount = toNumber(summaryData.free_surface_count);
+    const tanksCount = toNumber(summaryData.tanks_count);
 
     return (
         <AuthenticatedLayout
@@ -323,12 +406,18 @@ export default function BallastIndex({
                     </div>
                 )}
 
+                {workspace && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                        Tu šobrīd rediģē studenta privāto risinājumu. Izmaiņas netiek saglabātas globālajos kuģa datos.
+                    </div>
+                )}
+
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                                 <Ship className="h-4 w-4" />
-                                {vessel.name} · IMO {vessel.imo_number ?? 'nav norādīts'}
+                                {vesselData.name} · IMO {vesselData.imo_number ?? 'nav norādīts'}
                             </div>
 
                             <h2 className="text-2xl font-semibold text-slate-950">
@@ -338,7 +427,7 @@ export default function BallastIndex({
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                                 Šajā modulī var mainīt balasta tanku aizpildījumu un pārbaudīt,
                                 vai kuģim neveidojas bortu disbalanss vai brīvās virsmas risks.
-                                Saglabātās izmaiņas ietekmēs arī dashboard stabilitātes kopsavilkumu.
+                                Saglabātās izmaiņas ietekmēs arī stabilitātes aprēķinu.
                             </p>
                         </div>
 
@@ -347,7 +436,7 @@ export default function BallastIndex({
                                 Balansa statuss
                             </p>
                             <p className="mt-1 text-lg font-semibold">
-                                {summary.balance_status}
+                                {summaryData.balance_status}
                             </p>
                         </div>
                     </div>
@@ -356,34 +445,34 @@ export default function BallastIndex({
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryCard
                         title="Kopējais balasts"
-                        value={`${summary.total_ballast.toLocaleString('lv-LV')} t`}
-                        description={`${summary.fill_percent}% no kopējās tanku kapacitātes`}
+                        value={`${formatNumber(summaryData.total_ballast)} t`}
+                        description={`${formatNumber(summaryData.fill_percent, 1)}% no kopējās tanku kapacitātes`}
                         icon={Waves}
                     />
 
                     <SummaryCard
                         title="Kreisais borts"
-                        value={`${summary.port_tonnes.toLocaleString('lv-LV')} t`}
-                        description={`Labais borts: ${summary.starboard_tonnes.toLocaleString('lv-LV')} t`}
+                        value={`${formatNumber(summaryData.port_tonnes)} t`}
+                        description={`Labais borts: ${formatNumber(summaryData.starboard_tonnes)} t`}
                         icon={Anchor}
                     />
 
                     <SummaryCard
                         title="Bortu starpība"
-                        value={`${summary.imbalance_tonnes.toLocaleString('lv-LV')} t`}
-                        description={summary.imbalance_tonnes > 100 ? 'Nepieciešama pārbaude' : 'Bortu balanss ir pieņemams'}
+                        value={`${formatNumber(imbalance)} t`}
+                        description={imbalance > 100 ? 'Nepieciešama pārbaude' : 'Bortu balanss ir pieņemams'}
                         icon={Gauge}
                     />
 
                     <SummaryCard
                         title="Brīvās virsmas risks"
-                        value={`${summary.free_surface_count}`}
-                        description={`${summary.tanks_count} tanki kopā`}
-                        icon={summary.free_surface_count > 0 ? AlertTriangle : Waves}
+                        value={`${formatNumber(freeSurfaceCount, 0)}`}
+                        description={`${formatNumber(tanksCount, 0)} tanki kopā`}
+                        icon={freeSurfaceCount > 0 ? AlertTriangle : Waves}
                     />
                 </div>
 
-                <TankMiniMap tanks={tanks} />
+                <TankMiniMap tanks={tankRows} />
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-200 px-5 py-4">
@@ -411,12 +500,18 @@ export default function BallastIndex({
                             </thead>
 
                             <tbody>
-                                {tanks.map((tank) => (
+                                {tankRows.map((tank) => (
                                     <BallastTankRow key={tank.id} tank={tank} />
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    {tankRows.length === 0 && (
+                        <div className="border-t border-slate-100 px-5 py-8 text-center text-sm text-slate-500">
+                            Nav atrasts neviens balasta tanks.
+                        </div>
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Support\ActiveVessel;
+use App\Domain\Assignments\Services\AssignmentSolutionService;
+use App\Support\ActiveAssignmentSolution;
 
 class StudentTaskController extends Controller
 {
@@ -42,10 +44,15 @@ class StudentTaskController extends Controller
             'scenario.vessel',
             'scenario.cargoPlan',
             'submission',
+            'solution',
         ]);
 
         if ($assignment->scenario?->vessel) {
             ActiveVessel::set($request, $assignment->scenario->vessel);
+        }
+
+        if ($assignment->solution) {
+            ActiveAssignmentSolution::set($request, $assignment);
         }
 
         return Inertia::render('StudentTasks/Show', [
@@ -53,8 +60,11 @@ class StudentTaskController extends Controller
         ]);
     }
 
-    public function start(Request $request, Assignment $assignment): RedirectResponse
-    {
+    public function start(
+        Request $request,
+        Assignment $assignment,
+        AssignmentSolutionService $solutionService,
+    ): RedirectResponse {
         abort_unless($assignment->user_id === $request->user()->id, 403);
 
         $assignment->load('scenario.vessel');
@@ -62,6 +72,9 @@ class StudentTaskController extends Controller
         if ($assignment->scenario?->vessel) {
             ActiveVessel::set($request, $assignment->scenario->vessel);
         }
+
+        $solutionService->startOrGet($assignment);
+        ActiveAssignmentSolution::set($request, $assignment);
 
         if ($assignment->status === 'assigned') {
             $assignment->update([
@@ -72,56 +85,75 @@ class StudentTaskController extends Controller
 
         return redirect()
             ->route('student.tasks.show', $assignment)
-            ->with('success', 'Uzdevuma risināšana sākta. Simulatora aktīvais kuģis pārslēgts uz scenārija kuģi.');
+            ->with('success', 'Uzdevuma risināšana sākta. Izveidota privāta kravas un balasta kopija.');
     }
 
-    public function submit(
-        Request $request,
-        Assignment $assignment,
-        StabilityAnalysisService $analysisService,
-    ): RedirectResponse {
-        abort_unless($assignment->user_id === $request->user()->id, 403);
+public function submit(
+    Request $request,
+    Assignment $assignment,
+    StabilityAnalysisService $analysisService,
+    AssignmentSolutionService $solutionService,
+): RedirectResponse {
+    abort_unless($assignment->user_id === $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'student_comment' => ['nullable', 'string', 'max:5000'],
-        ]);
+    $validated = $request->validate([
+        'student_comment' => ['nullable', 'string', 'max:3000'],
+    ]);
 
-        $assignment->load([
-            'scenario.vessel.compartments',
-            'scenario.vessel.ballastTanks',
-            'scenario.vessel.limits',
-            'scenario.cargoPlan.items.cargoType',
-            'scenario.cargoPlan.items.compartment',
-        ]);
+    $assignment->loadMissing([
+        'scenario',
+        'solution',
+    ]);
 
-        $scenario = $assignment->scenario;
-        $vessel = $scenario->vessel;
-        $cargoPlan = $scenario->cargoPlan;
+    $solution = $solutionService->startOrGet($assignment);
 
-        $analysis = $analysisService->build($vessel, $cargoPlan);
+    $solution->load([
+        'vessel.compartments',
+        'vessel.limits',
+        'cargoPlan.items.cargoType',
+        'cargoPlan.items.compartment',
+        'ballastTanks',
+    ]);
 
-        Submission::updateOrCreate(
-            ['assignment_id' => $assignment->id],
-            [
-                'scenario_id' => $scenario->id,
-                'user_id' => $request->user()->id,
-                'cargo_plan_id' => $cargoPlan?->id,
-                'status' => 'submitted',
-                'stability_snapshot' => $analysis,
-                'student_comment' => $validated['student_comment'] ?? null,
-                'submitted_at' => now(),
-            ],
-        );
+    $scenario = $assignment->scenario;
+    $vessel = $solution->vessel;
+    $cargoPlan = $solution->cargoPlan;
 
-        $assignment->update([
+    $analysis = $analysisService->build(
+        $vessel,
+        $cargoPlan,
+        $solution->ballastTanks,
+    );
+
+    Submission::updateOrCreate(
+        [
+            'assignment_id' => $assignment->id,
+        ],
+        [
+            'scenario_id' => $scenario->id,
+            'user_id' => $request->user()->id,
+            'cargo_plan_id' => $cargoPlan?->id,
             'status' => 'submitted',
+            'stability_snapshot' => $analysis,
+            'student_comment' => $validated['student_comment'] ?? null,
             'submitted_at' => now(),
-        ]);
+        ],
+    );
 
-        return redirect()
-            ->route('student.tasks.show', $assignment)
-            ->with('success', 'Gala risinājums iesniegts.');
-    }
+    $assignment->update([
+        'status' => 'submitted',
+        'submitted_at' => now(),
+    ]);
+
+    $solution->update([
+        'status' => 'submitted',
+        'submitted_at' => now(),
+    ]);
+
+    return redirect()
+        ->route('student.tasks.show', $assignment)
+        ->with('success', 'Gala risinājums iesniegts.');
+}
 
     private function ensurePublishedScenariosAreAssignedToCurrentUser(Request $request): void
     {

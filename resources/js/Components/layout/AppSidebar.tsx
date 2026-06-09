@@ -10,6 +10,7 @@ import {
     Ship,
     Waves,
     ClipboardCheck,
+    GraduationCap,
     X,
 } from 'lucide-react';
 import type { 
@@ -34,9 +35,19 @@ const navigation: NavItem[] = [
         icon: LayoutDashboard,
     },
     {
+        label: 'Mani uzdevumi',
+        href: '/student/tasks',
+        icon: ClipboardCheck,
+    },
+    {
         label: 'Scenāriji',
         href: '/scenarios',
         icon: ClipboardList,
+    },
+    {
+    label: 'Iesniegumi',
+    href: '/teacher/submissions',
+    icon: GraduationCap,
     },
     {
         label: 'Kuģis',
@@ -68,11 +79,7 @@ const navigation: NavItem[] = [
         href: '/settings',
         icon: Settings,
     },
-    {
-        label: 'Mani uzdevumi',
-        href: '/student/tasks',
-        icon: ClipboardCheck,
-    },
+
 ];
 
 function isActive(currentPath: string, href: string) {

@@ -10,6 +10,7 @@ use App\Http\Controllers\StabilityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StudentTaskController;
+use App\Http\Controllers\TeacherSubmissionController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -60,6 +61,15 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/student/tasks/{assignment}/submit', [StudentTaskController::class, 'submit'])
         ->name('student.tasks.submit');
+
+    Route::get('/teacher/submissions', [TeacherSubmissionController::class, 'index'])
+    ->name('teacher.submissions.index');
+
+    Route::get('/teacher/submissions/{submission}', [TeacherSubmissionController::class, 'show'])
+        ->name('teacher.submissions.show');
+
+    Route::patch('/teacher/submissions/{submission}/grade', [TeacherSubmissionController::class, 'grade'])
+        ->name('teacher.submissions.grade');
     });
 
 require __DIR__.'/auth.php';

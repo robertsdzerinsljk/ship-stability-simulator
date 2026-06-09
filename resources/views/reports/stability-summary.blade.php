@@ -1,152 +1,261 @@
+@php
+    $vessel = $reportData['vessel'] ?? [];
+    $condition = $reportData['condition'] ?? [];
+    $metrics = $reportData['metrics'] ?? [];
+    $criteria = $reportData['criteria'] ?? [];
+    $holdLoads = $reportData['hold_loads'] ?? [];
+    $cargoItems = $reportData['cargo_items'] ?? [];
+    $ballastTanks = $reportData['ballast_tanks'] ?? [];
+    $workspace = $reportData['workspace'] ?? null;
+    $generatedAt = $reportData['generated_at'] ?? now()->format('d.m.Y H:i');
+
+    $fmt = fn ($value, $digits = 2) => number_format((float) ($value ?? 0), $digits, ',', ' ');
+
+    $statusLabel = function ($status) {
+        return match ($status) {
+            'pass' => 'Atbilst',
+            'warning' => 'Jāpārbauda',
+            'fail' => 'Neatbilst',
+            default => $status ?: '-',
+        };
+    };
+
+    $statusClass = function ($status) {
+        return match ($status) {
+            'pass' => 'status-pass',
+            'warning' => 'status-warning',
+            'fail' => 'status-fail',
+            default => 'status-default',
+        };
+    };
+
+    $sideLabel = function ($side) {
+        return match ($side) {
+            'port' => 'Kreisais borts',
+            'starboard' => 'Labais borts',
+            'center' => 'Centrs',
+            default => $side ?: '-',
+        };
+    };
+@endphp
+
 <!DOCTYPE html>
 <html lang="lv">
 <head>
     <meta charset="UTF-8">
-    <title>Ship Stability Report</title>
-
-    @if (!empty($reportData['workspace']))
-    <div style="margin: 12px 0; padding: 10px; border: 1px solid #a7f3d0; background: #ecfdf5;">
-        <strong>Studenta privātais risinājums</strong><br>
-        Uzdevums: {{ $reportData['workspace']['scenario_title'] ?? '-' }}<br>
-        Students: {{ $reportData['workspace']['student_name'] ?? '-' }}
-        @if (!empty($reportData['workspace']['student_email']))
-            ({{ $reportData['workspace']['student_email'] }})
-        @endif
-        <br>
-        Risinājuma statuss: {{ $reportData['workspace']['status'] ?? '-' }}
-    </div>
-@endif
+    <title>Ship Stability Simulator pārskats</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 11px;
-            color: #111827;
-            margin: 28px;
+            color: #0f172a;
+            line-height: 1.45;
+            margin: 0;
+            padding: 0;
         }
 
-        h1, h2, h3 {
-            margin: 0;
-            color: #0f172a;
+        .page {
+            padding: 28px;
+        }
+
+        .header {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
         }
 
         h1 {
             font-size: 22px;
-            margin-bottom: 6px;
+            margin: 0 0 4px 0;
+            color: #0f172a;
         }
 
         h2 {
             font-size: 15px;
-            margin-top: 22px;
-            margin-bottom: 8px;
+            margin: 20px 0 8px 0;
+            color: #0f172a;
             border-bottom: 1px solid #cbd5e1;
             padding-bottom: 5px;
         }
 
-        p {
-            margin: 0;
+        h3 {
+            font-size: 13px;
+            margin: 14px 0 8px 0;
         }
 
         .muted {
             color: #64748b;
         }
 
-        .header {
-            border-bottom: 2px solid #0f172a;
-            padding-bottom: 12px;
-            margin-bottom: 18px;
-        }
-
         .meta {
-            margin-top: 8px;
-            color: #475569;
+            margin-top: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            border-radius: 6px;
         }
 
-        .grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
+        .meta p {
+            margin: 3px 0;
         }
 
-        .grid td {
-            width: 25%;
-            border: 1px solid #cbd5e1;
-            padding: 8px;
-            vertical-align: top;
+        .workspace {
+            margin: 12px 0;
+            padding: 10px;
+            border: 1px solid #a7f3d0;
+            background: #ecfdf5;
+            border-radius: 6px;
+            color: #065f46;
         }
 
-        .label {
-            color: #64748b;
-            font-size: 10px;
-            margin-bottom: 3px;
-        }
-
-        .value {
-            font-size: 14px;
-            font-weight: bold;
-            color: #0f172a;
+        .notice {
+            margin-top: 18px;
+            padding: 10px;
+            border: 1px solid #fde68a;
+            background: #fffbeb;
+            color: #92400e;
+            border-radius: 6px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 8px;
+            page-break-inside: auto;
+        }
+
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
         }
 
         th {
             background: #f1f5f9;
             color: #334155;
-            font-size: 10px;
+            font-weight: bold;
             text-align: left;
-            padding: 6px;
             border: 1px solid #cbd5e1;
+            padding: 6px;
+            font-size: 10px;
         }
 
         td {
+            border: 1px solid #e2e8f0;
             padding: 6px;
-            border: 1px solid #cbd5e1;
             vertical-align: top;
         }
 
-        .status-pass {
-            color: #047857;
+        .grid {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .grid td {
+            width: 25%;
+        }
+
+        .label {
+            color: #64748b;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .value {
+            font-size: 13px;
             font-weight: bold;
+            color: #0f172a;
+            margin-top: 2px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .status-pass {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
         }
 
         .status-warning {
+            background: #fffbeb;
             color: #b45309;
-            font-weight: bold;
+            border: 1px solid #fde68a;
         }
 
         .status-fail {
+            background: #fef2f2;
             color: #b91c1c;
-            font-weight: bold;
+            border: 1px solid #fecaca;
         }
 
-        .note {
-            margin-top: 16px;
-            padding: 10px;
+        .status-default {
             background: #f8fafc;
-            border: 1px solid #cbd5e1;
             color: #475569;
-            line-height: 1.5;
+            border: 1px solid #cbd5e1;
         }
 
-        .page-break {
-            page-break-before: always;
+        .footer {
+            margin-top: 24px;
+            padding-top: 10px;
+            border-top: 1px solid #cbd5e1;
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        .small {
+            font-size: 9px;
+            color: #64748b;
         }
     </style>
 </head>
+
 <body>
+<div class="page">
     <div class="header">
         <h1>Ship Stability Simulator pārskats</h1>
         <p class="muted">Stabilitātes, kravas plāna un balasta stāvokļa kopsavilkums</p>
 
         <div class="meta">
-            <p><strong>Kuģis:</strong> {{ $vessel->name }} · IMO {{ $vessel->imo_number ?? 'nav norādīts' }}</p>
-            <p><strong>Kravas plāns:</strong> {{ $cargoPlan?->name ?? 'Nav aktīva kravas plāna' }}</p>
-            <p><strong>Ģenerēts:</strong> {{ $generatedAt }}</p>
+            <p>
+                <strong>Kuģis:</strong>
+                {{ $vessel['name'] ?? '-' }}
+                · IMO {{ $vessel['imo_number'] ?? 'nav norādīts' }}
+            </p>
+
+            <p>
+                <strong>Kravas plāns:</strong>
+                {{ $condition['cargo_plan_name'] ?? 'Nav aktīva kravas plāna' }}
+            </p>
+
+            <p>
+                <strong>Ģenerēts:</strong>
+                {{ $generatedAt }}
+            </p>
         </div>
+
+        @if (!empty($workspace))
+            <div class="workspace">
+                <strong>Studenta privātais risinājums</strong><br>
+                Uzdevums: {{ $workspace['scenario_title'] ?? '-' }}<br>
+                Students: {{ $workspace['student_name'] ?? '-' }}
+                @if (!empty($workspace['student_email']))
+                    ({{ $workspace['student_email'] }})
+                @endif
+                <br>
+                Risinājuma statuss: {{ $workspace['status'] ?? '-' }}
+            </div>
+        @endif
     </div>
 
     <h2>Kuģa pamatdati</h2>
@@ -155,78 +264,100 @@
         <tr>
             <td>
                 <div class="label">Tips</div>
-                <div class="value">{{ $vessel->type ?? '-' }}</div>
-            </td>
-            <td>
-                <div class="label">DWT</div>
-                <div class="value">{{ number_format((float) $vessel->dwt, 2, ',', ' ') }} t</div>
+                <div class="value">{{ $vessel['type'] ?? '-' }}</div>
             </td>
             <td>
                 <div class="label">Garums</div>
-                <div class="value">{{ number_format((float) $vessel->length_overall, 2, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($vessel['length_overall'] ?? 0, 2) }} m</div>
             </td>
             <td>
                 <div class="label">Platums</div>
-                <div class="value">{{ number_format((float) $vessel->breadth, 2, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($vessel['breadth'] ?? 0, 2) }} m</div>
+            </td>
+            <td>
+                <div class="label">DWT</div>
+                <div class="value">{{ $fmt($vessel['dwt'] ?? 0, 2) }} t</div>
             </td>
         </tr>
     </table>
 
-    <h2>Galvenie stabilitātes rādītāji</h2>
+    <h2>Stabilitātes galvenie rādītāji</h2>
 
     <table class="grid">
         <tr>
             <td>
                 <div class="label">Displacement</div>
-                <div class="value">{{ number_format($analysis['metrics']['displacement'], 2, ',', ' ') }} t</div>
+                <div class="value">{{ $fmt($metrics['displacement'] ?? 0, 2) }} t</div>
             </td>
             <td>
-                <div class="label">GM</div>
-                <div class="value">{{ number_format($analysis['metrics']['gm'], 3, ',', ' ') }} m</div>
+                <div class="label">Krava</div>
+                <div class="value">{{ $fmt($metrics['cargo_weight'] ?? 0, 2) }} t</div>
             </td>
+            <td>
+                <div class="label">Balasts</div>
+                <div class="value">{{ $fmt($metrics['ballast_weight'] ?? 0, 2) }} t</div>
+            </td>
+            <td>
+                <div class="label">Lightship</div>
+                <div class="value">{{ $fmt($metrics['lightship_weight'] ?? 0, 2) }} t</div>
+            </td>
+        </tr>
+
+        <tr>
             <td>
                 <div class="label">KG</div>
-                <div class="value">{{ number_format($analysis['metrics']['kg'], 3, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($metrics['kg'] ?? 0, 3) }} m</div>
             </td>
             <td>
                 <div class="label">KM</div>
-                <div class="value">{{ number_format($analysis['metrics']['km'], 3, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($metrics['km'] ?? 0, 3) }} m</div>
+            </td>
+            <td>
+                <div class="label">GM</div>
+                <div class="value">{{ $fmt($metrics['gm'] ?? 0, 3) }} m</div>
+            </td>
+            <td>
+                <div class="label">FSC</div>
+                <div class="value">{{ $fmt($metrics['free_surface_correction'] ?? 0, 4) }} m</div>
             </td>
         </tr>
+
         <tr>
             <td>
-                <div class="label">Trims</div>
-                <div class="value">{{ number_format(abs($analysis['metrics']['trim']), 3, ',', ' ') }} m</div>
+                <div class="label">Trim</div>
+                <div class="value">{{ $fmt($metrics['trim'] ?? 0, 3) }} m</div>
+                <div class="small">{{ $metrics['trim_direction'] ?? '-' }}</div>
             </td>
             <td>
-                <div class="label">Trima virziens</div>
-                <div class="value">{{ $analysis['metrics']['trim_direction'] }}</div>
+                <div class="label">Heel</div>
+                <div class="value">{{ $fmt($metrics['heel'] ?? 0, 3) }}°</div>
             </td>
-            <td>
-                <div class="label">Sasvērums</div>
-                <div class="value">{{ number_format($analysis['metrics']['heel'], 3, ',', ' ') }}°</div>
-            </td>
-            <td>
-                <div class="label">Brīvās virsmas korekcija</div>
-                <div class="value">{{ number_format($analysis['metrics']['free_surface_correction'], 4, ',', ' ') }} m</div>
-            </td>
-        </tr>
-        <tr>
             <td>
                 <div class="label">Priekšgala iegrime</div>
-                <div class="value">{{ number_format($analysis['metrics']['fore_draft'], 2, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($metrics['fore_draft'] ?? 0, 2) }} m</div>
             </td>
             <td>
                 <div class="label">Pakaļgala iegrime</div>
-                <div class="value">{{ number_format($analysis['metrics']['aft_draft'], 2, ',', ' ') }} m</div>
+                <div class="value">{{ $fmt($metrics['aft_draft'] ?? 0, 2) }} m</div>
+            </td>
+        </tr>
+
+        <tr>
+            <td>
+                <div class="label">LCG</div>
+                <div class="value">{{ $fmt($metrics['lcg'] ?? 0, 3) }} m</div>
             </td>
             <td>
-                <div class="label">Maksimālais GZ</div>
-                <div class="value">{{ number_format($analysis['metrics']['max_gz'], 3, ',', ' ') }} m</div>
+                <div class="label">TCG</div>
+                <div class="value">{{ $fmt($metrics['tcg'] ?? 0, 3) }} m</div>
             </td>
             <td>
-                <div class="label">Leņķis pie maks. GZ</div>
-                <div class="value">{{ $analysis['metrics']['angle_at_max_gz'] }}°</div>
+                <div class="label">Max GZ</div>
+                <div class="value">{{ $fmt($metrics['max_gz'] ?? 0, 3) }} m</div>
+            </td>
+            <td>
+                <div class="label">Leņķis pie Max GZ</div>
+                <div class="value">{{ $fmt($metrics['angle_at_max_gz'] ?? 0, 0) }}°</div>
             </td>
         </tr>
     </table>
@@ -235,65 +366,70 @@
 
     <table>
         <thead>
-            <tr>
-                <th>Kritērijs</th>
-                <th>Prasība</th>
-                <th>Faktiski</th>
-                <th>Statuss</th>
-                <th>Komentārs</th>
-            </tr>
+        <tr>
+            <th>Kritērijs</th>
+            <th>Prasība</th>
+            <th>Faktiski</th>
+            <th>Statuss</th>
+            <th>Komentārs</th>
+        </tr>
         </thead>
+
         <tbody>
-            @foreach ($analysis['criteria'] as $criterion)
-                <tr>
-                    <td>{{ $criterion['name'] }}</td>
-                    <td>{{ $criterion['requirement'] }}</td>
-                    <td>{{ $criterion['actual'] }}</td>
-                    <td class="status-{{ $criterion['status'] }}">
-                        @if ($criterion['status'] === 'pass')
-                            Atbilst
-                        @elseif ($criterion['status'] === 'warning')
-                            Jāpārbauda
-                        @else
-                            Neatbilst
-                        @endif
-                    </td>
-                    <td>{{ $criterion['comment'] }}</td>
-                </tr>
-            @endforeach
+        @forelse ($criteria as $criterion)
+            @php
+                $status = $criterion['status'] ?? 'default';
+            @endphp
+            <tr>
+                <td>{{ $criterion['name'] ?? '-' }}</td>
+                <td>{{ $criterion['requirement'] ?? '-' }}</td>
+                <td>{{ $criterion['actual'] ?? '-' }}</td>
+                <td>
+                    <span class="badge {{ $statusClass($status) }}">
+                        {{ $statusLabel($status) }}
+                    </span>
+                </td>
+                <td>{{ $criterion['comment'] ?? '-' }}</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="5">Nav kritēriju datu.</td>
+            </tr>
+        @endforelse
         </tbody>
     </table>
 
-    <div class="page-break"></div>
-
-    <h2>Kravas plāns</h2>
+    <h2>Kravas plāna rindas</h2>
 
     <table>
         <thead>
-            <tr>
-                <th>Tilpne</th>
-                <th>Krava</th>
-                <th>Tips</th>
-                <th>Svars</th>
-                <th>Tilpums</th>
-                <th>Noslodze</th>
-                <th>Iekraušana</th>
-                <th>Izkraušana</th>
-            </tr>
+        <tr>
+            <th>Tilpne</th>
+            <th>Krava</th>
+            <th>Tips</th>
+            <th>Svars</th>
+            <th>Tilpums</th>
+            <th>Iekraušana</th>
+            <th>Izkraušana</th>
+        </tr>
         </thead>
+
         <tbody>
-            @foreach ($cargoRows as $row)
-                <tr>
-                    <td>{{ $row['hold'] }} · {{ $row['name'] }}</td>
-                    <td>{{ $row['cargo_name'] }}</td>
-                    <td>{{ $row['cargo_type'] }}</td>
-                    <td>{{ number_format($row['weight_tonnes'], 2, ',', ' ') }} t</td>
-                    <td>{{ number_format($row['volume_m3'], 2, ',', ' ') }} m³</td>
-                    <td>{{ number_format($row['load_percent'], 1, ',', ' ') }}%</td>
-                    <td>{{ $row['loading_port'] }}</td>
-                    <td>{{ $row['discharge_port'] }}</td>
-                </tr>
-            @endforeach
+        @forelse ($cargoItems as $item)
+            <tr>
+                <td>{{ $item['compartment_code'] ?? '-' }} · {{ $item['compartment'] ?? '-' }}</td>
+                <td>{{ $item['cargo_name'] ?? '-' }}</td>
+                <td>{{ $item['cargo_type'] ?? '-' }}</td>
+                <td>{{ $fmt($item['weight_tonnes'] ?? 0, 2) }} t</td>
+                <td>{{ $fmt($item['volume_m3'] ?? 0, 2) }} m³</td>
+                <td>{{ $item['loading_port'] ?? '-' }}</td>
+                <td>{{ $item['discharge_port'] ?? '-' }}</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="7">Nav kravas plāna rindu.</td>
+            </tr>
+        @endforelse
         </tbody>
     </table>
 
@@ -301,34 +437,80 @@
 
     <table>
         <thead>
-            <tr>
-                <th>Tanks</th>
-                <th>Nosaukums</th>
-                <th>Borts</th>
-                <th>Daudzums</th>
-                <th>Kapacitāte</th>
-                <th>Aizpildījums</th>
-                <th>Brīvā virsma</th>
-            </tr>
+        <tr>
+            <th>Tanks</th>
+            <th>Borts</th>
+            <th>Daudzums</th>
+            <th>Kapacitāte</th>
+            <th>Aizpildījums</th>
+            <th>Risks</th>
+        </tr>
         </thead>
+
         <tbody>
-            @foreach ($ballastRows as $row)
-                <tr>
-                    <td>{{ $row['code'] }}</td>
-                    <td>{{ $row['name'] }}</td>
-                    <td>{{ $row['side'] }}</td>
-                    <td>{{ number_format($row['current_tonnes'], 2, ',', ' ') }} t</td>
-                    <td>{{ number_format($row['capacity_tonnes'], 2, ',', ' ') }} t</td>
-                    <td>{{ number_format($row['fill_percent'], 1, ',', ' ') }}%</td>
-                    <td>{{ $row['free_surface_risk'] ? 'Risks' : 'Nav būtiska riska' }}</td>
-                </tr>
-            @endforeach
+        @forelse ($ballastTanks as $tank)
+            <tr>
+                <td>{{ $tank['code'] ?? '-' }} · {{ $tank['name'] ?? '-' }}</td>
+                <td>{{ $sideLabel($tank['side'] ?? null) }}</td>
+                <td>{{ $fmt($tank['current_tonnes'] ?? 0, 2) }} t</td>
+                <td>{{ $fmt($tank['capacity_tonnes'] ?? 0, 2) }} t</td>
+                <td>{{ $fmt($tank['fill_percent'] ?? 0, 1) }}%</td>
+                <td>
+                    @if (!empty($tank['free_surface_risk']))
+                        <span class="badge status-warning">Brīvās virsmas risks</span>
+                    @else
+                        <span class="badge status-pass">Nav būtiska riska</span>
+                    @endif
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="6">Nav balasta tanku datu.</td>
+            </tr>
+        @endforelse
         </tbody>
     </table>
 
-    <div class="note">
+    <h2>Tilpņu noslodze</h2>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Tilpne</th>
+            <th>Svars</th>
+            <th>Kapacitāte</th>
+            <th>Noslodze</th>
+            <th>LCG</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        @forelse ($holdLoads as $hold)
+            <tr>
+                <td>{{ $hold['code'] ?? '-' }} · {{ $hold['name'] ?? '-' }}</td>
+                <td>{{ $fmt($hold['weight_tonnes'] ?? 0, 2) }} t</td>
+                <td>{{ $fmt($hold['capacity_tonnes'] ?? 0, 2) }} t</td>
+                <td>{{ $fmt($hold['load_percent'] ?? 0, 1) }}%</td>
+                <td>{{ $fmt($hold['lcg'] ?? 0, 2) }} m</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="5">Nav tilpņu noslodzes datu.</td>
+            </tr>
+        @endforelse
+        </tbody>
+    </table>
+
+    <div class="notice">
         <strong>Piezīme:</strong>
-        Šis pārskats ir ģenerēts mācību simulatora vajadzībām. Aprēķini izmanto vienkāršotu modeli un nav paredzēti kuģa reālai ekspluatācijai vai sertificētai stabilitātes pārbaudei.
+        šis PDF ir ģenerēts mācību simulatora vajadzībām. Aprēķini paredzēti
+        studentu darba pārbaudei un simulācijas analīzei, nevis reālai kuģa
+        ekspluatācijas dokumentācijai.
     </div>
+
+    <div class="footer">
+        Ship Stability Simulator · ģenerēts {{ $generatedAt }}
+    </div>
+</div>
 </body>
 </html>

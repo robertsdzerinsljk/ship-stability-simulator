@@ -9,6 +9,7 @@ import {
     Settings,
     Ship,
     Waves,
+    BarChart3,
     ClipboardCheck,
     GraduationCap,
     X,
@@ -48,6 +49,11 @@ const navigation: NavItem[] = [
     label: 'Iesniegumi',
     href: '/teacher/submissions',
     icon: GraduationCap,
+    },
+    {
+    label: 'Analītika',
+    href: '/teacher/analytics',
+    icon: BarChart3,
     },
     {
         label: 'Kuģis',

@@ -12,6 +12,7 @@ use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StudentTaskController;
 use App\Http\Controllers\TeacherSubmissionController;
 use App\Http\Controllers\VesselController;
+use App\Http\Controllers\TeacherAnalyticsController;
 
 
 Route::get('/', function () {
@@ -72,6 +73,10 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/teacher/submissions/{submission}/grade', [TeacherSubmissionController::class, 'grade'])
         ->name('teacher.submissions.grade');
+        
+    Route::get('/teacher/analytics', [TeacherAnalyticsController::class, 'index'])
+    ->name('teacher.analytics.index');
+
     });
 
 require __DIR__.'/auth.php';

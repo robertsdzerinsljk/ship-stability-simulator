@@ -8,17 +8,21 @@ use App\Http\Controllers\CargoPlanController;
 use App\Http\Controllers\BallastController;
 use App\Http\Controllers\StabilityController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScenarioController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::get('/scenarios', function () {
-        return Inertia::render('Scenarios/Index');
-    })->name('scenarios.index');
+    Route::get('/scenarios', [ScenarioController::class, 'index'])->name('scenarios.index');
+
+    Route::post('/scenarios', [ScenarioController::class, 'store'])->name('scenarios.store');
+
+    Route::patch('/scenarios/{scenario}/status', [ScenarioController::class, 'updateStatus'])
+        ->name('scenarios.status.update');
 
     Route::get('/vessels', function () {
         return Inertia::render('Vessels/Index');

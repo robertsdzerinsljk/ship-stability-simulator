@@ -48,4 +48,8 @@ class Vessel extends Model
     {
         return $this->hasOne(VesselLimit::class);
     }
+    public function scenarios(): HasMany
+    {
+    return $this->hasMany(Scenario::class);
+    }
 }

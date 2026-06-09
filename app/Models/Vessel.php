@@ -27,7 +27,20 @@ class Vessel extends Model
         'lightship_weight',
         'km_default',
         'status',
+        'is_real_vessel',
+        'data_source_name',
+        'data_source_url',
+        'data_confidence',
+        'data_notes',
+        'hydrostatic_notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_real_vessel' => 'boolean',
+        ];
+    }
 
     public function compartments(): HasMany
     {
@@ -44,12 +57,13 @@ class Vessel extends Model
         return $this->hasMany(CargoPlan::class);
     }
 
+    public function scenarios(): HasMany
+    {
+        return $this->hasMany(Scenario::class);
+    }
+
     public function limits(): HasOne
     {
         return $this->hasOne(VesselLimit::class);
-    }
-    public function scenarios(): HasMany
-    {
-    return $this->hasMany(Scenario::class);
     }
 }

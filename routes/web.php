@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScenarioController;
 use App\Http\Controllers\StudentTaskController;
 use App\Http\Controllers\TeacherSubmissionController;
+use App\Http\Controllers\VesselController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -26,9 +27,7 @@ Route::get('/', function () {
     Route::patch('/scenarios/{scenario}/status', [ScenarioController::class, 'updateStatus'])
         ->name('scenarios.status.update');
 
-    Route::get('/vessels', function () {
-        return Inertia::render('Vessels/Index');
-    })->name('vessels.index');
+    Route::get('/vessels', [VesselController::class, 'index'])->name('vessels.index');
 
     Route::get('/cargo-plan', [CargoPlanController::class, 'index'])->name('cargo-plan.index');
 

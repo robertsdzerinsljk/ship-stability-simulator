@@ -13,8 +13,14 @@ class ScenarioSeeder extends Seeder
     public function run(): void
     {
         $vessel = Vessel::query()
-            ->where('status', 'active')
+            ->where('imo_number', '8420804')
             ->first();
+
+        if (! $vessel) {
+            $vessel = Vessel::query()
+                ->where('status', 'active')
+                ->first();
+        }
 
         if (! $vessel) {
             return;
@@ -36,8 +42,8 @@ class ScenarioSeeder extends Seeder
                 'vessel_id' => $vessel->id,
                 'cargo_plan_id' => $cargoPlan?->id,
                 'created_by_user_id' => $teacher?->id,
-                'short_description' => 'Studentam jāizvērtē esošais kravas plāns, jāpārbauda stabilitāte un nepieciešamības gadījumā jāveic balasta korekcija.',
-                'task_text' => 'Izmantojot piešķirto kuģi un sākotnējo kravas plānu, pārbaudi tilpņu noslodzi, GM, trimu, sasvērumu un brīvās virsmas risku. Ja nepieciešams, koriģē balasta tankus tā, lai kuģa stāvoklis atbilstu drošības kritērijiem.',
+                'short_description' => 'Studentam jāizvērtē beramkravas izvietojums uz bulk/ore carrier tipa kuģa, jāpārbauda stabilitāte un jāveic balasta korekcija.',
+                'task_text' => 'Izmantojot piešķirto bulk carrier tipa kuģi un sākotnējo kravas plānu, pārbaudi tilpņu noslodzi, GM, trimu, sasvērumu un brīvās virsmas risku. Ja nepieciešams, koriģē balasta tankus tā, lai kuģa stāvoklis atbilstu drošības kritērijiem.',
                 'course' => 'Kuģa stabilitāte',
                 'difficulty' => 'medium',
                 'mode' => 'training',
@@ -45,8 +51,8 @@ class ScenarioSeeder extends Seeder
                 'due_at' => now()->addDays(7),
                 'estimated_minutes' => 45,
                 'final_requirements' => 'Gala risinājumā jābūt izpildītam minimālajam GM, trima robežai, sasvēruma robežai un tilpņu noslodzes prasībām. Studentam jāģenerē PDF pārskats.',
-                'teacher_notes' => 'Demo scenārijs pirmajai sistēmas versijai.',
-                'student_hints' => 'Sāc ar kravas plāna pārbaudi, pēc tam pārbaudi GM un tikai tad koriģē balastu.',
+                'teacher_notes' => 'Demo scenārijs ar reāla kuģa publiskajiem pamatdatiem un mācību aproksimācijām.',
+                'student_hints' => 'Sāc ar tilpņu noslodzes pārbaudi, pēc tam pārbaudi GM un tikai tad koriģē balastu.',
                 'show_hints' => true,
                 'allow_solution_comparison' => false,
             ],

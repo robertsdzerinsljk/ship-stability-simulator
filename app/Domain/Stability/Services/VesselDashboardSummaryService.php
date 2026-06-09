@@ -7,7 +7,7 @@ use App\Models\Vessel;
 
 class VesselDashboardSummaryService
 {
-    public function build(Vessel $vessel, ?CargoPlan $cargoPlan): array
+    public function build(Vessel $vessel, ?CargoPlan $cargoPlan, $ballastTanksOverride = null): array
     {
         $compartments = $vessel->compartments;
         $ballastTanks = $vessel->ballastTanks;

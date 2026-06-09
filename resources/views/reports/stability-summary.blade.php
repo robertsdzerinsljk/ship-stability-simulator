@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <title>Ship Stability Report</title>
 
+    @if (!empty($reportData['workspace']))
+    <div style="margin: 12px 0; padding: 10px; border: 1px solid #a7f3d0; background: #ecfdf5;">
+        <strong>Studenta privātais risinājums</strong><br>
+        Uzdevums: {{ $reportData['workspace']['scenario_title'] ?? '-' }}<br>
+        Students: {{ $reportData['workspace']['student_name'] ?? '-' }}
+        @if (!empty($reportData['workspace']['student_email']))
+            ({{ $reportData['workspace']['student_email'] }})
+        @endif
+        <br>
+        Risinājuma statuss: {{ $reportData['workspace']['status'] ?? '-' }}
+    </div>
+@endif
+
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;

@@ -16,7 +16,7 @@ type Vessel = {
     id?: number;
     name?: string;
     type?: string;
-    imo_number?: string;
+    imo_number?: string | null;
 };
 
 type Summary = {
@@ -57,6 +57,8 @@ type BallastIndexProps = {
         assignment_id: number;
         solution_id: number;
         mode: string;
+        status?: string;
+        is_locked?: boolean;
     } | null;
 };
 
@@ -173,7 +175,13 @@ function SummaryCard({
     );
 }
 
-function BallastTankRow({ tank }: { tank: BallastTank }) {
+function BallastTankRow({
+    tank,
+    isLocked,
+}: {
+    tank: BallastTank;
+    isLocked: boolean;
+}) {
     const capacityTonnes = toNumber(tank.capacity_tonnes);
     const capacityM3 = toNumber(tank.capacity_m3);
     const current = toNumber(tank.current_tonnes);
@@ -185,6 +193,10 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
+
+        if (isLocked) {
+            return;
+        }
 
         setSaving(true);
 
@@ -218,8 +230,14 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
                     max={capacityTonnes}
                     step="0.01"
                     value={currentTonnes}
+                    disabled={isLocked}
                     onChange={(event) => setCurrentTonnes(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
+                    className={[
+                        'h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10',
+                        isLocked
+                            ? 'cursor-not-allowed bg-slate-100 text-slate-500'
+                            : 'bg-white',
+                    ].join(' ')}
                 />
 
                 <p className="mt-1 text-xs text-slate-500">
@@ -273,11 +291,11 @@ function BallastTankRow({ tank }: { tank: BallastTank }) {
                 <form onSubmit={submit}>
                     <button
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || isLocked}
                         className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <Save className="h-4 w-4" />
-                        {saving ? 'Saglabā...' : 'Saglabāt'}
+                        {isLocked ? 'Iesniegts' : saving ? 'Saglabā...' : 'Saglabāt'}
                     </button>
                 </form>
             </td>
@@ -382,6 +400,7 @@ export default function BallastIndex({
     };
 
     const tankRows = Array.isArray(tanks) ? tanks : [];
+    const isLocked = Boolean(workspace?.is_locked);
     const imbalance = toNumber(summaryData.imbalance_tonnes);
     const freeSurfaceCount = toNumber(summaryData.free_surface_count);
     const tanksCount = toNumber(summaryData.tanks_count);
@@ -407,8 +426,17 @@ export default function BallastIndex({
                 )}
 
                 {workspace && (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-                        Tu šobrīd rediģē studenta privāto risinājumu. Izmaiņas netiek saglabātas globālajos kuģa datos.
+                    <div
+                        className={[
+                            'rounded-2xl border px-4 py-3 text-sm font-medium',
+                            isLocked
+                                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-800',
+                        ].join(' ')}
+                    >
+                        {isLocked
+                            ? 'Risinājums jau ir iesniegts. Balasta datus vairs nevar mainīt.'
+                            : 'Tu šobrīd rediģē studenta privāto risinājumu. Izmaiņas netiek saglabātas globālajos kuģa datos.'}
                     </div>
                 )}
 
@@ -480,7 +508,9 @@ export default function BallastIndex({
                             Balasta tanku tabula
                         </h3>
                         <p className="mt-1 text-sm text-slate-500">
-                            Maini pašreizējo daudzumu tonnās un saglabā rindu.
+                            {isLocked
+                                ? 'Risinājums ir iesniegts, tāpēc balasta rindas ir tikai apskatāmas.'
+                                : 'Maini pašreizējo daudzumu tonnās un saglabā rindu.'}
                         </p>
                     </div>
 
@@ -501,7 +531,11 @@ export default function BallastIndex({
 
                             <tbody>
                                 {tankRows.map((tank) => (
-                                    <BallastTankRow key={tank.id} tank={tank} />
+                                    <BallastTankRow
+                                        key={tank.id}
+                                        tank={tank}
+                                        isLocked={isLocked}
+                                    />
                                 ))}
                             </tbody>
                         </table>

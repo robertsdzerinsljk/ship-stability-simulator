@@ -39,6 +39,7 @@ class BallastController extends Controller
                 'code' => $tank->code,
                 'side' => $tank->side,
                 'capacity_tonnes' => round($capacity, 2),
+                'capacity_m3' => round((float) $tank->capacity_m3, 2),
                 'current_tonnes' => round($current, 2),
                 'fill_percent' => round($fillPercent, 1),
                 'lcg' => round((float) $tank->lcg, 2),
@@ -95,6 +96,8 @@ class BallastController extends Controller
                 'assignment_id' => $solution->assignment_id,
                 'solution_id' => $solution->id,
                 'mode' => 'student_solution',
+                'status' => $solution->status,
+                'is_locked' => $solution->status !== 'in_progress',
             ] : null,
         ]);
     }
@@ -102,6 +105,10 @@ class BallastController extends Controller
     public function updateTank(Request $request, int $tankId): RedirectResponse
     {
         $solution = ActiveAssignmentSolution::current($request);
+
+        if ($solution && $solution->status !== 'in_progress') {
+            return back()->with('error', 'Risinājums jau ir iesniegts. Balastu vairs nevar mainīt.');
+        }
 
         $tank = $solution
             ? SolutionBallastTank::query()

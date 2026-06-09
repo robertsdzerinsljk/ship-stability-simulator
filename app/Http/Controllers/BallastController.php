@@ -8,14 +8,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\ActiveVessel;
 
 class BallastController extends Controller
 {
     public function index(): Response
     {
-        $vessel = Vessel::query()
+        $vessel = ActiveVessel::query(request())
             ->with(['ballastTanks', 'limits'])
-            ->where('status', 'active')
             ->firstOrFail();
 
         $tanks = $vessel->ballastTanks->map(function (BallastTank $tank) {

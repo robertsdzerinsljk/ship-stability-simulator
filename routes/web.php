@@ -13,6 +13,7 @@ use App\Http\Controllers\StudentTaskController;
 use App\Http\Controllers\TeacherSubmissionController;
 use App\Http\Controllers\VesselController;
 
+
 Route::get('/', function () {
     return redirect()->route('dashboard');
 });
@@ -28,6 +29,8 @@ Route::get('/', function () {
         ->name('scenarios.status.update');
 
     Route::get('/vessels', [VesselController::class, 'index'])->name('vessels.index');
+    Route::post('/vessels/{vessel}/select', [VesselController::class, 'select'])
+    ->name('vessels.select');
 
     Route::get('/cargo-plan', [CargoPlanController::class, 'index'])->name('cargo-plan.index');
 

@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { type PageProps } from '@/types';
 import {
     Anchor,
     Database,
@@ -40,6 +41,7 @@ type Vessel = {
     ballast_tanks_count: number;
     cargo_plans_count: number;
     scenarios_count: number;
+    is_active_simulator_vessel: boolean;
 };
 
 type TypeSummary = {
@@ -51,6 +53,13 @@ type VesselsIndexProps = {
     vessels: Vessel[];
     typeSummary: TypeSummary[];
 };
+
+type VesselPageProps = PageProps<{
+    flash?: {
+        success?: string;
+        error?: string;
+    };
+}>;
 
 function SummaryCard({
     title,
@@ -96,6 +105,15 @@ function VesselCard({ vessel }: { vessel: Vessel }) {
         .split('|')
         .map((url) => url.trim())
         .filter(Boolean);
+    const selectVessel = () => {
+    router.post(
+        `/vessels/${vessel.id}/select`,
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
+};
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -126,13 +144,30 @@ function VesselCard({ vessel }: { vessel: Vessel }) {
                     </p>
                 </div>
 
-                <div className="rounded-2xl bg-slate-950 px-5 py-4 text-white">
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">
-                        Built
-                    </p>
-                    <p className="mt-1 text-lg font-semibold">
-                        {vessel.built_year ?? '-'}
-                    </p>
+                <div className="flex flex-col gap-3">
+                    <div
+                        className={[
+                            'rounded-2xl px-5 py-4 text-white',
+                            vessel.is_active_simulator_vessel ? 'bg-emerald-700' : 'bg-slate-950',
+                        ].join(' ')}
+                    >
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                            {vessel.is_active_simulator_vessel ? 'Aktīvais kuģis' : 'Built'}
+                        </p>
+                        <p className="mt-1 text-lg font-semibold">
+                            {vessel.is_active_simulator_vessel ? 'Simulatorā' : vessel.built_year ?? '-'}
+                        </p>
+                    </div>
+
+                    {!vessel.is_active_simulator_vessel && (
+                        <button
+                            type="button"
+                            onClick={selectVessel}
+                            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        >
+                            Izvēlēties simulatoram
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -232,6 +267,10 @@ export default function VesselsIndex({
     vessels,
     typeSummary,
 }: VesselsIndexProps) {
+    const { props } = usePage<VesselPageProps>();
+    const success = props.flash?.success;
+    const error = props.flash?.error;
+
     return (
         <AuthenticatedLayout
             title="Kuģi"
@@ -240,6 +279,17 @@ export default function VesselsIndex({
             <Head title="Kuģi" />
 
             <div className="space-y-6">
+                {success && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                        {success}
+                    </div>
+                )}
+
+                {error && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                        {error}
+                    </div>
+                )}
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>

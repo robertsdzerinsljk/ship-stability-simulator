@@ -9,12 +9,14 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use App\Support\ActiveVessel;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function index(StabilityAnalysisService $analysisService): Response
+    public function index(Request $request, StabilityAnalysisService $analysisService): Response
     {
-        [$vessel, $cargoPlan, $data] = $this->buildReportData($analysisService);
+        [$vessel, $cargoPlan, $data] = $this->buildReportData($request, $analysisService);
 
         return Inertia::render('Reports/Index', [
             'report' => [
@@ -31,9 +33,9 @@ class ReportController extends Controller
         ]);
     }
 
-    public function downloadStabilitySummary(StabilityAnalysisService $analysisService): SymfonyResponse
+    public function downloadStabilitySummary(Request $request, StabilityAnalysisService $analysisService): SymfonyResponse
     {
-        [$vessel, $cargoPlan, $data] = $this->buildReportData($analysisService);
+        [$vessel, $cargoPlan, $data] = $this->buildReportData($request, $analysisService);
 
         $pdf = Pdf::loadView('reports.stability-summary', [
             'vessel' => $vessel,
@@ -49,16 +51,15 @@ class ReportController extends Controller
         return $pdf->download($fileName);
     }
 
-    private function buildReportData(StabilityAnalysisService $analysisService): array
-    {
-        $vessel = Vessel::query()
-            ->with([
-                'compartments',
-                'ballastTanks',
-                'limits',
-            ])
-            ->where('status', 'active')
-            ->firstOrFail();
+private function buildReportData(Request $request, StabilityAnalysisService $analysisService): array
+{
+    $vessel = ActiveVessel::query($request)
+        ->with([
+            'compartments',
+            'ballastTanks',
+            'limits',
+        ])
+        ->firstOrFail();
 
         $cargoPlan = $vessel
             ->cargoPlans()

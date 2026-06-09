@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Vessel;
+use App\Support\ActiveVessel;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class VesselController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $activeVesselId = ActiveVessel::id($request);
+
         $vessels = Vessel::query()
             ->withCount([
                 'compartments',
@@ -41,6 +46,7 @@ class VesselController extends Controller
                 'lightship_weight' => (float) $vessel->lightship_weight,
                 'km_default' => (float) $vessel->km_default,
                 'is_real_vessel' => $vessel->is_real_vessel,
+                'is_active_simulator_vessel' => $vessel->id === $activeVesselId,
                 'data_source_name' => $vessel->data_source_name,
                 'data_source_url' => $vessel->data_source_url,
                 'data_confidence' => $vessel->data_confidence,
@@ -63,6 +69,16 @@ class VesselController extends Controller
         return Inertia::render('Vessels/Index', [
             'vessels' => $vessels,
             'typeSummary' => $typeSummary,
+            'activeVesselId' => $activeVesselId,
         ]);
+    }
+
+    public function select(Request $request, Vessel $vessel): RedirectResponse
+    {
+        abort_unless($vessel->status === 'active', 404);
+
+        ActiveVessel::set($request, $vessel);
+
+        return back()->with('success', "{$vessel->name} tagad ir aktīvais simulatora kuģis.");
     }
 }

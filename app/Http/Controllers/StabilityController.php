@@ -3,21 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Stability\Services\StabilityAnalysisService;
-use App\Models\Vessel;
+use App\Support\ActiveVessel;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class StabilityController extends Controller
 {
-    public function __invoke(StabilityAnalysisService $analysisService): Response
+    public function __invoke(Request $request, StabilityAnalysisService $analysisService): Response
     {
-        $vessel = Vessel::query()
+        $vessel = ActiveVessel::query($request)
             ->with([
                 'compartments',
                 'ballastTanks',
                 'limits',
             ])
-            ->where('status', 'active')
             ->firstOrFail();
 
         $cargoPlan = $vessel

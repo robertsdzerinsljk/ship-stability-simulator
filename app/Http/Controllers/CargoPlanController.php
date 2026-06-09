@@ -8,12 +8,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\ActiveVessel;
 
 class CargoPlanController extends Controller
 {
     public function index(): Response
     {
-        $vessel = Vessel::query()
+        $vessel = ActiveVessel::query(request())
             ->with([
                 'compartments',
                 'cargoPlans' => function ($query) {
@@ -22,7 +23,6 @@ class CargoPlanController extends Controller
                 'cargoPlans.items.cargoType',
                 'cargoPlans.items.compartment',
             ])
-            ->where('status', 'active')
             ->firstOrFail();
 
         $cargoPlan = $vessel->cargoPlans->first();

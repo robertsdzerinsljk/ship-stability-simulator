@@ -3,21 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Stability\Services\VesselDashboardSummaryService;
-use App\Models\Vessel;
+use App\Support\ActiveVessel;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(VesselDashboardSummaryService $summaryService): Response
+    public function __invoke(Request $request, VesselDashboardSummaryService $summaryService): Response
     {
-        $vessel = Vessel::query()
+        $vessel = ActiveVessel::query($request)
             ->with([
                 'compartments',
                 'ballastTanks',
                 'limits',
             ])
-            ->where('status', 'active')
             ->firstOrFail();
 
         $cargoPlan = $vessel

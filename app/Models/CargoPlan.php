@@ -6,22 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class VesselCompartment extends Model
+class CargoPlan extends Model
 {
     protected $fillable = [
         'vessel_id',
+        'created_by_user_id',
         'name',
-        'code',
-        'type',
-        'capacity_tonnes',
-        'capacity_m3',
-        'lcg',
-        'vcg',
-        'tcg',
-        'max_load_percent',
-        'allowed_cargo_type',
-        'sort_order',
+        'mode',
         'status',
+        'notes',
     ];
 
     public function vessel(): BelongsTo
@@ -29,7 +22,12 @@ class VesselCompartment extends Model
         return $this->belongsTo(Vessel::class);
     }
 
-    public function cargoPlanItems(): HasMany
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function items(): HasMany
     {
         return $this->hasMany(CargoPlanItem::class);
     }

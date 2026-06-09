@@ -39,6 +39,11 @@ class Vessel extends Model
         return $this->hasMany(BallastTank::class)->orderBy('sort_order');
     }
 
+    public function cargoPlans(): HasMany
+    {
+        return $this->hasMany(CargoPlan::class);
+    }
+
     public function limits(): HasOne
     {
         return $this->hasOne(VesselLimit::class);

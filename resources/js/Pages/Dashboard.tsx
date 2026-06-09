@@ -1,3 +1,5 @@
+import MetricCard from '@/Components/dashboard/MetricCard';
+import ShipSideProfile from '@/Components/dashboard/ShipSideProfile';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import {
@@ -9,25 +11,88 @@ import {
     ShieldCheck,
     Waves,
 } from 'lucide-react';
-import MetricCard from '@/Components/dashboard/MetricCard';
-import ShipSideProfile from '@/Components/dashboard/ShipSideProfile';
 
-const warnings = [
-    {
-        title: '2. tilpne tuvojas maksimālajai noslodzei',
-        description: 'Aizpildījums pārsniedz 90 %. Ieteicams pārskatīt kravas sadali.',
-    },
-    {
-        title: 'GM rezerve ir zema',
-        description: 'Stabilitāte ir droša, bet rezerves robeža nav liela.',
-    },
-    {
-        title: 'Neliels trims uz pakaļgalu',
-        description: 'Balasta korekcija var uzlabot kuģa stāvokli.',
-    },
-];
+type StatusLevel = 'good' | 'warning' | 'danger' | 'neutral';
 
-export default function Dashboard() {
+type DashboardSummary = {
+    vessel: {
+        id: number;
+        name: string;
+        type?: string;
+        imo_number?: string;
+        flag?: string;
+        dwt: number;
+        length_overall: number;
+        breadth: number;
+    };
+    metrics: {
+        safety_status: {
+            label: string;
+            level: StatusLevel;
+            description: string;
+        };
+        cargo_load: {
+            value: number;
+            cargo_tonnes: number;
+            dwt: number;
+        };
+        gm: {
+            value: number;
+            min: number;
+        };
+        trim: {
+            value: number;
+            direction: string;
+        };
+        heel: {
+            value: number;
+        };
+        ballast: {
+            value: string;
+            tonnes: number;
+        };
+        drafts: {
+            fore: number;
+            aft: number;
+            mean: number;
+        };
+        total_displacement: number;
+    };
+    holds: {
+        id: number;
+        name: string;
+        code: string;
+        weight_tonnes: number;
+        capacity_tonnes: number;
+        load_percent: number;
+        status: string;
+    }[];
+    warnings: {
+        level: StatusLevel;
+        title: string;
+        description: string;
+    }[];
+};
+
+type DashboardProps = {
+    summary: DashboardSummary;
+};
+
+function metricStatus(level: StatusLevel): StatusLevel {
+    if (level === 'danger') {
+        return 'danger';
+    }
+
+    if (level === 'warning') {
+        return 'warning';
+    }
+
+    return 'good';
+}
+
+export default function Dashboard({ summary }: DashboardProps) {
+    const warnings = summary.warnings;
+
     return (
         <AuthenticatedLayout
             title="Pārskats"
@@ -39,55 +104,60 @@ export default function Dashboard() {
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                     <MetricCard
                         title="Drošības statuss"
-                        value="Droši"
-                        description="Visi kritiskie limiti izpildīti"
+                        value={summary.metrics.safety_status.label}
+                        description={summary.metrics.safety_status.description}
                         icon={ShieldCheck}
-                        status="good"
+                        status={metricStatus(summary.metrics.safety_status.level)}
                     />
 
                     <MetricCard
                         title="Kravas noslodze"
-                        value="72%"
-                        description="36 542 t no 50 801 t"
+                        value={`${summary.metrics.cargo_load.value}%`}
+                        description={`${summary.metrics.cargo_load.cargo_tonnes.toLocaleString('lv-LV')} t no ${summary.metrics.cargo_load.dwt.toLocaleString('lv-LV')} t`}
                         icon={PackageOpen}
                         status="neutral"
                     />
 
                     <MetricCard
                         title="GM"
-                        value="1,62 m"
-                        description="Virs minimālās robežas"
+                        value={`${summary.metrics.gm.value} m`}
+                        description={`Minimālā robeža: ${summary.metrics.gm.min} m`}
                         icon={Scale}
-                        status="good"
+                        status={summary.metrics.gm.value >= summary.metrics.gm.min ? 'good' : 'danger'}
                     />
 
                     <MetricCard
                         title="Trims"
-                        value="0,27 m"
-                        description="Uz pakaļgalu"
+                        value={`${Math.abs(summary.metrics.trim.value)} m`}
+                        description={summary.metrics.trim.direction}
                         icon={Anchor}
-                        status="warning"
+                        status={Math.abs(summary.metrics.trim.value) > 1.3 ? 'warning' : 'good'}
                     />
 
                     <MetricCard
                         title="Balasts"
-                        value="Līdzsvarots"
-                        description="Tanku sadalījums korekts"
+                        value={summary.metrics.ballast.value}
+                        description={`${summary.metrics.ballast.tonnes.toLocaleString('lv-LV')} t balasta`}
                         icon={Waves}
-                        status="good"
+                        status={summary.metrics.ballast.value === 'Līdzsvarots' ? 'good' : 'warning'}
                     />
 
                     <MetricCard
                         title="Brīdinājumi"
-                        value="3"
-                        description="Nepieciešama pārbaude"
+                        value={`${warnings.length}`}
+                        description={warnings.length > 0 ? 'Nepieciešama pārbaude' : 'Nav aktīvu brīdinājumu'}
                         icon={AlertTriangle}
-                        status="warning"
+                        status={warnings.length > 0 ? 'warning' : 'good'}
                     />
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,0.8fr)]">
-                    <ShipSideProfile />
+                    <ShipSideProfile
+                        vessel={summary.vessel}
+                        holds={summary.holds}
+                        drafts={summary.metrics.drafts}
+                        totalDisplacement={summary.metrics.total_displacement}
+                    />
 
                     <div className="space-y-6">
                         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -105,9 +175,15 @@ export default function Dashboard() {
                             </div>
 
                             <div className="space-y-3">
+                                {warnings.length === 0 && (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                                        Pašlaik nav aktīvu brīdinājumu. Kuģa stāvoklis atbilst pamatkritērijiem.
+                                    </div>
+                                )}
+
                                 {warnings.map((warning, index) => (
                                     <div
-                                        key={warning.title}
+                                        key={`${warning.title}-${index}`}
                                         className="rounded-xl border border-slate-200 p-4"
                                     >
                                         <div className="flex gap-3">

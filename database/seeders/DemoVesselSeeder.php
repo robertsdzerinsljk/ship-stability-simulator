@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\BallastTank;
+use App\Models\CargoPlan;
+use App\Models\CargoPlanItem;
+use App\Models\CargoType;
 use App\Models\Vessel;
 use App\Models\VesselCompartment;
 use App\Models\VesselLimit;
@@ -35,7 +38,42 @@ class DemoVesselSeeder extends Seeder
             ],
         );
 
+        CargoPlan::where('vessel_id', $vessel->id)->delete();
         VesselCompartment::where('vessel_id', $vessel->id)->delete();
+        BallastTank::where('vessel_id', $vessel->id)->delete();
+
+        $ironOre = CargoType::updateOrCreate(
+            ['name' => 'Iron Ore'],
+            [
+                'category' => 'bulk',
+                'density' => 2.600,
+                'stowage_factor' => 0.385,
+                'notes' => 'High-density bulk cargo for training scenarios.',
+                'status' => 'active',
+            ],
+        );
+
+        $coal = CargoType::updateOrCreate(
+            ['name' => 'Coal'],
+            [
+                'category' => 'bulk',
+                'density' => 0.850,
+                'stowage_factor' => 1.176,
+                'notes' => 'Medium-density bulk cargo.',
+                'status' => 'active',
+            ],
+        );
+
+        $grain = CargoType::updateOrCreate(
+            ['name' => 'Grain'],
+            [
+                'category' => 'bulk',
+                'density' => 0.770,
+                'stowage_factor' => 1.299,
+                'notes' => 'Educational grain cargo example.',
+                'status' => 'active',
+            ],
+        );
 
         $holds = [
             ['Hold 1', 'H1', 5200, 6400, -72.0, 7.2, 0.0, 1],
@@ -47,8 +85,10 @@ class DemoVesselSeeder extends Seeder
             ['Hold 7', 'H7', 5200, 6400, 72.0, 7.2, 0.0, 7],
         ];
 
+        $createdHolds = [];
+
         foreach ($holds as [$name, $code, $tonnes, $m3, $lcg, $vcg, $tcg, $sortOrder]) {
-            VesselCompartment::create([
+            $createdHolds[$code] = VesselCompartment::create([
                 'vessel_id' => $vessel->id,
                 'name' => $name,
                 'code' => $code,
@@ -64,8 +104,6 @@ class DemoVesselSeeder extends Seeder
                 'status' => 'available',
             ]);
         }
-
-        BallastTank::where('vessel_id', $vessel->id)->delete();
 
         $tanks = [
             ['Fore Peak', 'FP', 'center', 900, 900, 320, -88.0, 2.1, 0.0, 1],
@@ -113,5 +151,40 @@ class DemoVesselSeeder extends Seeder
                 'load_line_note' => 'Training vessel limits for educational simulation.',
             ],
         );
+
+        $cargoPlan = CargoPlan::create([
+            'vessel_id' => $vessel->id,
+            'name' => 'Demo Loading Condition',
+            'mode' => 'training',
+            'status' => 'active',
+            'notes' => 'Initial demo cargo plan used for dashboard calculations.',
+        ]);
+
+        $cargoItems = [
+            ['H1', $grain, 'Grain', 3328.00],
+            ['H2', $ironOre, 'Iron Ore', 6188.00],
+            ['H3', $coal, 'Coal', 5112.00],
+            ['H4', $ironOre, 'Iron Ore', 7600.00],
+            ['H5', $grain, 'Grain', 3024.00],
+            ['H6', $coal, 'Coal', 3672.00],
+            ['H7', $grain, 'Grain', 1612.00],
+        ];
+
+        foreach ($cargoItems as [$holdCode, $cargoType, $cargoName, $weight]) {
+            $compartment = $createdHolds[$holdCode];
+
+            CargoPlanItem::create([
+                'cargo_plan_id' => $cargoPlan->id,
+                'vessel_compartment_id' => $compartment->id,
+                'cargo_type_id' => $cargoType->id,
+                'cargo_name' => $cargoName,
+                'weight_tonnes' => $weight,
+                'volume_m3' => round($weight / max((float) $cargoType->density, 0.1), 2),
+                'loading_port' => 'Liepāja',
+                'discharge_port' => 'Rotterdam',
+                'priority' => 1,
+                'status' => 'planned',
+            ]);
+        }
     }
 }

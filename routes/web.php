@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CargoPlanController;
+use App\Http\Controllers\BallastController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -23,9 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/cargo-plan', [CargoPlanController::class, 'index'])->name('cargo-plan.index');
 
-    Route::get('/ballast', function () {
-        return Inertia::render('Ballast/Index');
-    })->name('ballast.index');
+    Route::get('/ballast', [BallastController::class, 'index'])->name('ballast.index');
 
     Route::get('/stability', function () {
         return Inertia::render('Stability/Index');

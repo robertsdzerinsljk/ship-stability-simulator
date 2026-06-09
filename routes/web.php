@@ -1,22 +1,46 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+
+    Route::get('/scenarios', function () {
+        return Inertia::render('Scenarios/Index');
+    })->name('scenarios.index');
+
+    Route::get('/vessels', function () {
+        return Inertia::render('Vessels/Index');
+    })->name('vessels.index');
+
+    Route::get('/cargo-plan', function () {
+        return Inertia::render('CargoPlan/Index');
+    })->name('cargo-plan.index');
+
+    Route::get('/ballast', function () {
+        return Inertia::render('Ballast/Index');
+    })->name('ballast.index');
+
+    Route::get('/stability', function () {
+        return Inertia::render('Stability/Index');
+    })->name('stability.index');
+
+    Route::get('/reports', function () {
+        return Inertia::render('Reports/Index');
+    })->name('reports.index');
+
+    Route::get('/settings', function () {
+        return Inertia::render('Settings/Index');
+    })->name('settings.index');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

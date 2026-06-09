@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\ActiveVessel;
 
 class StudentTaskController extends Controller
 {
@@ -43,6 +44,10 @@ class StudentTaskController extends Controller
             'submission',
         ]);
 
+        if ($assignment->scenario?->vessel) {
+            ActiveVessel::set($request, $assignment->scenario->vessel);
+        }
+
         return Inertia::render('StudentTasks/Show', [
             'assignment' => $this->mapAssignment($assignment, includeDetails: true),
         ]);
@@ -51,6 +56,12 @@ class StudentTaskController extends Controller
     public function start(Request $request, Assignment $assignment): RedirectResponse
     {
         abort_unless($assignment->user_id === $request->user()->id, 403);
+
+        $assignment->load('scenario.vessel');
+
+        if ($assignment->scenario?->vessel) {
+            ActiveVessel::set($request, $assignment->scenario->vessel);
+        }
 
         if ($assignment->status === 'assigned') {
             $assignment->update([
@@ -61,7 +72,7 @@ class StudentTaskController extends Controller
 
         return redirect()
             ->route('student.tasks.show', $assignment)
-            ->with('success', 'Uzdevuma risināšana sākta.');
+            ->with('success', 'Uzdevuma risināšana sākta. Simulatora aktīvais kuģis pārslēgts uz scenārija kuģi.');
     }
 
     public function submit(

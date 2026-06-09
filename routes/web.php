@@ -6,6 +6,8 @@ use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CargoPlanController;
 use App\Http\Controllers\BallastController;
+use App\Http\Controllers\StabilityController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -26,13 +28,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/ballast', [BallastController::class, 'index'])->name('ballast.index');
 
-    Route::get('/stability', function () {
-        return Inertia::render('Stability/Index');
-    })->name('stability.index');
+    Route::get('/stability', StabilityController::class)->name('stability.index');
 
-    Route::get('/reports', function () {
-        return Inertia::render('Reports/Index');
-    })->name('reports.index');
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    Route::get('/reports/stability-summary/pdf', [ReportController::class, 'downloadStabilitySummary'])
+        ->name('reports.stability-summary.pdf');
 
     Route::get('/settings', function () {
         return Inertia::render('Settings/Index');

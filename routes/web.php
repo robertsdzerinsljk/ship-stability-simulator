@@ -9,6 +9,7 @@ use App\Http\Controllers\BallastController;
 use App\Http\Controllers\StabilityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\StudentTaskController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -48,6 +49,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+    Route::get('/student/tasks', [StudentTaskController::class, 'index'])
+    ->name('student.tasks.index');
+
+    Route::get('/student/tasks/{assignment}', [StudentTaskController::class, 'show'])
+        ->name('student.tasks.show');
+
+    Route::post('/student/tasks/{assignment}/start', [StudentTaskController::class, 'start'])
+        ->name('student.tasks.start');
+
+    Route::post('/student/tasks/{assignment}/submit', [StudentTaskController::class, 'submit'])
+        ->name('student.tasks.submit');
+    });
 
 require __DIR__.'/auth.php';

@@ -9,9 +9,12 @@ import {
     Settings,
     Ship,
     Waves,
+    ClipboardCheck,
     X,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import type { 
+    LucideIcon,
+ } from 'lucide-react';
 
 type NavItem = {
     label: string;
@@ -64,6 +67,11 @@ const navigation: NavItem[] = [
         label: 'Iestatījumi',
         href: '/settings',
         icon: Settings,
+    },
+    {
+        label: 'Mani uzdevumi',
+        href: '/student/tasks',
+        icon: ClipboardCheck,
     },
 ];
 

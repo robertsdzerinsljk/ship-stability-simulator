@@ -2,7 +2,7 @@
 namespace Deployer;
 
 require 'recipe/laravel.php';
-
+set('ssh_multiplexing', false);
 // Config
 set('application', 'shipstability');
 set('repository', 'https://github.com/robertsdzerinsljk/ship-stability-simulator.git');
@@ -14,7 +14,8 @@ add('writable_dirs', ['bootstrap/cache', 'storage']);
 
 // Hosts
 
-host('production')
+
+host('main')
     ->setHostname('10.11.0.46')
     ->set('remote_user', 'eivis_deploy_user')
     ->set('deploy_path', '/var/www/shipstability')

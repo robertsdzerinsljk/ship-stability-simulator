@@ -1,251 +1,948 @@
-import MetricCard from '@/Components/dashboard/MetricCard';
-import ShipSideProfile from '@/Components/dashboard/ShipSideProfile';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import type { LucideIcon } from 'lucide-react';
 import {
     Activity,
     AlertTriangle,
-    Anchor,
+    BarChart3,
+    CheckCircle2,
+    ClipboardCheck,
+    ClipboardList,
+    FileText,
+    GraduationCap,
     PackageOpen,
     Scale,
-    ShieldCheck,
+    Settings,
+    Ship,
+    Users,
     Waves,
 } from 'lucide-react';
 
-type StatusLevel = 'good' | 'warning' | 'danger' | 'neutral';
+type DashboardMode = 'student' | 'teacher' | 'admin';
 
-type DashboardSummary = {
-    vessel: {
-        id: number;
-        name: string;
-        type?: string;
-        imo_number?: string;
-        flag?: string;
-        dwt: number;
-        length_overall: number;
-        breadth: number;
+type Analysis = {
+    vessel?: {
+        id?: number;
+        name?: string | null;
+        type?: string | null;
+        imo_number?: string | null;
     };
-    metrics: {
-        safety_status: {
-            label: string;
-            level: StatusLevel;
-            description: string;
-        };
-        cargo_load: {
-            value: number;
-            cargo_tonnes: number;
-            dwt: number;
-        };
-        gm: {
-            value: number;
-            min: number;
-        };
-        trim: {
-            value: number;
-            direction: string;
-        };
-        heel: {
-            value: number;
-        };
-        ballast: {
-            value: string;
-            tonnes: number;
-        };
-        drafts: {
-            fore: number;
-            aft: number;
-            mean: number;
-        };
-        total_displacement: number;
+    condition?: {
+        cargo_plan_name?: string | null;
+        mode?: string | null;
     };
-    holds: {
-        id: number;
-        name: string;
-        code: string;
-        weight_tonnes: number;
-        capacity_tonnes: number;
-        load_percent: number;
-        status: string;
-    }[];
-    warnings: {
-        level: StatusLevel;
-        title: string;
-        description: string;
+    metrics?: {
+        displacement?: number | string | null;
+        lightship_weight?: number | string | null;
+        cargo_weight?: number | string | null;
+        ballast_weight?: number | string | null;
+        kg?: number | string | null;
+        km?: number | string | null;
+        gm?: number | string | null;
+        free_surface_correction?: number | string | null;
+        trim?: number | string | null;
+        trim_direction?: string | null;
+        heel?: number | string | null;
+        fore_draft?: number | string | null;
+        aft_draft?: number | string | null;
+        mean_draft?: number | string | null;
+        max_gz?: number | string | null;
+        angle_at_max_gz?: number | string | null;
+    };
+    criteria?: {
+        name?: string;
+        requirement?: string;
+        actual?: string;
+        status?: string;
+        comment?: string;
     }[];
 };
+
+type Workspace = {
+    mode?: string;
+    assignment_id?: number;
+    solution_id?: number;
+    status?: string | null;
+    is_locked?: boolean;
+    scenario_title?: string | null;
+    score?: number | string | null;
+    teacher_comment?: string | null;
+} | null;
+
+type StudentAssignment = {
+    id: number;
+    status?: string | null;
+    assigned_at?: string | null;
+    started_at?: string | null;
+    submitted_at?: string | null;
+    due_at?: string | null;
+    has_solution?: boolean;
+    score?: number | string | null;
+    teacher_comment?: string | null;
+    scenario?: {
+        id?: number | null;
+        title?: string | null;
+        difficulty?: string | null;
+        mode?: string | null;
+    };
+    vessel?: {
+        id?: number | null;
+        name?: string | null;
+        type?: string | null;
+        imo_number?: string | null;
+    };
+};
+
+type StudentDashboard = {
+    stats?: {
+        total?: number | string | null;
+        assigned?: number | string | null;
+        in_progress?: number | string | null;
+        submitted?: number | string | null;
+        graded?: number | string | null;
+    };
+    current_assignment?: StudentAssignment | null;
+    recent_assignments?: StudentAssignment[];
+} | null;
+
+type SubmissionItem = {
+    id: number;
+    status?: string | null;
+    score?: number | string | null;
+    submitted_at?: string | null;
+    student?: {
+        name?: string | null;
+        email?: string | null;
+    };
+    scenario?: {
+        title?: string | null;
+    };
+    vessel?: {
+        name?: string | null;
+        imo_number?: string | null;
+    };
+    metrics?: {
+        gm?: number | string | null;
+        trim?: number | string | null;
+        heel?: number | string | null;
+        displacement?: number | string | null;
+    };
+    criteria_summary?: {
+        total?: number | string | null;
+        fail?: number | string | null;
+        warning?: number | string | null;
+        pass?: number | string | null;
+    };
+};
+
+type TeacherDashboard = {
+    stats?: {
+        submissions_total?: number | string | null;
+        submissions_pending?: number | string | null;
+        submissions_graded?: number | string | null;
+        average_score?: number | string | null;
+        scenarios_total?: number | string | null;
+        scenarios_published?: number | string | null;
+        vessels_total?: number | string | null;
+    };
+    recent_submissions?: SubmissionItem[];
+} | null;
+
+type AdminDashboard = {
+    stats?: {
+        users_total?: number | string | null;
+        students_total?: number | string | null;
+        teachers_total?: number | string | null;
+        admins_total?: number | string | null;
+        vessels_total?: number | string | null;
+        active_vessels_total?: number | string | null;
+        scenarios_total?: number | string | null;
+        published_scenarios_total?: number | string | null;
+        submissions_total?: number | string | null;
+        graded_submissions_total?: number | string | null;
+    };
+    recent_submissions?: SubmissionItem[];
+} | null;
 
 type DashboardProps = {
-    summary: DashboardSummary;
+    mode?: DashboardMode;
+    analysis?: Analysis | null;
+    workspace?: Workspace;
+    studentDashboard?: StudentDashboard;
+    teacherDashboard?: TeacherDashboard;
+    adminDashboard?: AdminDashboard;
 };
 
-function metricStatus(level: StatusLevel): StatusLevel {
-    if (level === 'danger') {
-        return 'danger';
-    }
+function toNumber(value: number | string | null | undefined) {
+    const number = Number(value ?? 0);
 
-    if (level === 'warning') {
-        return 'warning';
-    }
-
-    return 'good';
+    return Number.isFinite(number) ? number : 0;
 }
 
-export default function Dashboard({ summary }: DashboardProps) {
-    const warnings = summary.warnings;
+function formatNumber(value: number | string | null | undefined, digits = 2) {
+    return toNumber(value).toLocaleString('lv-LV', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+}
 
+function statusLabel(status?: string | null) {
+    if (status === 'assigned') {
+        return 'Piešķirts';
+    }
+
+    if (status === 'in_progress') {
+        return 'Risināšanā';
+    }
+
+    if (status === 'submitted') {
+        return 'Iesniegts';
+    }
+
+    if (status === 'graded') {
+        return 'Novērtēts';
+    }
+
+    return status ?? 'Nav statusa';
+}
+
+function difficultyLabel(value?: string | null) {
+    if (value === 'easy') {
+        return 'Viegls';
+    }
+
+    if (value === 'medium') {
+        return 'Vidējs';
+    }
+
+    if (value === 'hard') {
+        return 'Sarežģīts';
+    }
+
+    if (value === 'exam') {
+        return 'Eksāmens';
+    }
+
+    return value ?? '-';
+}
+
+function statusBadge(status?: string | null) {
+    if (status === 'graded') {
+        return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+    }
+
+    if (status === 'submitted') {
+        return 'bg-blue-50 text-blue-700 ring-blue-100';
+    }
+
+    if (status === 'in_progress') {
+        return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    return 'bg-slate-50 text-slate-700 ring-slate-100';
+}
+
+function criteriaBadge(status?: string) {
+    if (status === 'fail') {
+        return 'bg-red-50 text-red-700 ring-red-100';
+    }
+
+    if (status === 'warning') {
+        return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+}
+
+function StatCard({
+    title,
+    value,
+    description,
+    icon: Icon,
+}: {
+    title: string;
+    value: string;
+    description: string;
+    icon: LucideIcon;
+}) {
     return (
-        <AuthenticatedLayout
-            title="Pārskats"
-            subtitle="Operatīvais kuģa stāvoklis un galvenie rādītāji"
-        >
-            <Head title="Pārskats" />
-
-            <div className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                    <MetricCard
-                        title="Drošības statuss"
-                        value={summary.metrics.safety_status.label}
-                        description={summary.metrics.safety_status.description}
-                        icon={ShieldCheck}
-                        status={metricStatus(summary.metrics.safety_status.level)}
-                    />
-
-                    <MetricCard
-                        title="Kravas noslodze"
-                        value={`${summary.metrics.cargo_load.value}%`}
-                        description={`${summary.metrics.cargo_load.cargo_tonnes.toLocaleString('lv-LV')} t no ${summary.metrics.cargo_load.dwt.toLocaleString('lv-LV')} t`}
-                        icon={PackageOpen}
-                        status="neutral"
-                    />
-
-                    <MetricCard
-                        title="GM"
-                        value={`${summary.metrics.gm.value} m`}
-                        description={`Minimālā robeža: ${summary.metrics.gm.min} m`}
-                        icon={Scale}
-                        status={summary.metrics.gm.value >= summary.metrics.gm.min ? 'good' : 'danger'}
-                    />
-
-                    <MetricCard
-                        title="Trims"
-                        value={`${Math.abs(summary.metrics.trim.value)} m`}
-                        description={summary.metrics.trim.direction}
-                        icon={Anchor}
-                        status={Math.abs(summary.metrics.trim.value) > 1.3 ? 'warning' : 'good'}
-                    />
-
-                    <MetricCard
-                        title="Balasts"
-                        value={summary.metrics.ballast.value}
-                        description={`${summary.metrics.ballast.tonnes.toLocaleString('lv-LV')} t balasta`}
-                        icon={Waves}
-                        status={summary.metrics.ballast.value === 'Līdzsvarots' ? 'good' : 'warning'}
-                    />
-
-                    <MetricCard
-                        title="Brīdinājumi"
-                        value={`${warnings.length}`}
-                        description={warnings.length > 0 ? 'Nepieciešama pārbaude' : 'Nav aktīvu brīdinājumu'}
-                        icon={AlertTriangle}
-                        status={warnings.length > 0 ? 'warning' : 'good'}
-                    />
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="text-sm font-medium text-slate-500">{title}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+                    <p className="mt-1 text-sm text-slate-500">{description}</p>
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,0.8fr)]">
-                    <ShipSideProfile
-                        vessel={summary.vessel}
-                        holds={summary.holds}
-                        drafts={summary.metrics.drafts}
-                        totalDisplacement={summary.metrics.total_displacement}
-                    />
+                <div className="rounded-xl bg-slate-50 p-3 text-slate-700 ring-1 ring-slate-100">
+                    <Icon className="h-5 w-5" />
+                </div>
+            </div>
+        </div>
+    );
+}
 
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="mb-4 flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-base font-semibold text-slate-950">
-                                        Galvenie brīdinājumi
-                                    </h2>
-                                    <p className="text-sm text-slate-500">
-                                        Sistēmas atrastie riski
-                                    </p>
-                                </div>
+function QuickLink({
+    href,
+    icon: Icon,
+    title,
+    description,
+}: {
+    href: string;
+    icon: LucideIcon;
+    title: string;
+    description: string;
+}) {
+    return (
+        <Link
+            href={href}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+        >
+            <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-slate-950 p-3 text-white">
+                    <Icon className="h-5 w-5" />
+                </div>
 
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                            </div>
+                <div>
+                    <h3 className="font-semibold text-slate-950">{title}</h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                        {description}
+                    </p>
+                </div>
+            </div>
+        </Link>
+    );
+}
 
-                            <div className="space-y-3">
-                                {warnings.length === 0 && (
-                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-                                        Pašlaik nav aktīvu brīdinājumu. Kuģa stāvoklis atbilst pamatkritērijiem.
-                                    </div>
-                                )}
+function StudentDashboardView({
+    analysis,
+    workspace,
+    studentDashboard,
+}: {
+    analysis?: Analysis | null;
+    workspace?: Workspace;
+    studentDashboard?: StudentDashboard;
+}) {
+    const stats = {
+        total: 0,
+        assigned: 0,
+        in_progress: 0,
+        submitted: 0,
+        graded: 0,
+        ...studentDashboard?.stats,
+    };
 
-                                {warnings.map((warning, index) => (
-                                    <div
-                                        key={`${warning.title}-${index}`}
-                                        className="rounded-xl border border-slate-200 p-4"
-                                    >
-                                        <div className="flex gap-3">
-                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 text-sm font-semibold text-amber-700">
-                                                {index + 1}
-                                            </div>
+    const assignment = studentDashboard?.current_assignment ?? null;
+    const recentAssignments = Array.isArray(studentDashboard?.recent_assignments)
+        ? studentDashboard?.recent_assignments ?? []
+        : [];
 
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-950">
-                                                    {warning.title}
-                                                </p>
-                                                <p className="mt-1 text-sm text-slate-500">
-                                                    {warning.description}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+    const metrics = {
+        displacement: 0,
+        cargo_weight: 0,
+        ballast_weight: 0,
+        kg: 0,
+        km: 0,
+        gm: 0,
+        trim: 0,
+        trim_direction: '-',
+        heel: 0,
+        fore_draft: 0,
+        aft_draft: 0,
+        ...analysis?.metrics,
+    };
+
+    const vessel = {
+        name: assignment?.vessel?.name ?? analysis?.vessel?.name ?? '-',
+        imo_number: assignment?.vessel?.imo_number ?? analysis?.vessel?.imo_number ?? '-',
+        type: assignment?.vessel?.type ?? analysis?.vessel?.type ?? '-',
+    };
+
+    const criteria = Array.isArray(analysis?.criteria) ? analysis?.criteria ?? [] : [];
+    const failCount = criteria.filter((item) => item.status === 'fail').length;
+    const warningCount = criteria.filter((item) => item.status === 'warning').length;
+
+    return (
+        <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                    <div>
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            {assignment && (
+                                <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${statusBadge(assignment.status)}`}>
+                                    {statusLabel(assignment.status)}
+                                </span>
+                            )}
+
+                            {assignment?.scenario?.difficulty && (
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    {difficultyLabel(assignment.scenario.difficulty)}
+                                </span>
+                            )}
+
+                            {workspace?.score !== null && workspace?.score !== undefined && (
+                                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-100">
+                                    Vērtējums: {formatNumber(workspace.score, 1)}/10
+                                </span>
+                            )}
                         </div>
 
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div className="mb-4 flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-slate-700" />
-                                <h2 className="text-base font-semibold text-slate-950">
-                                    Ātrās darbības
-                                </h2>
+                        <h2 className="text-2xl font-semibold text-slate-950">
+                            {assignment?.scenario?.title ?? workspace?.scenario_title ?? 'Nav aktīva uzdevuma'}
+                        </h2>
+
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                            {assignment
+                                ? `Kuģis: ${vessel.name} · IMO ${vessel.imo_number}. Šeit redzams tavs aktuālais darba stāvoklis un galvenie stabilitātes rādītāji.`
+                                : 'Tev pašlaik nav aktīva uzdevuma. Atver sadaļu “Mani uzdevumi”, lai sāktu risināšanu.'}
+                        </p>
+
+                        {workspace?.teacher_comment && (
+                            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-800">
+                                <strong>Pasniedzēja komentārs:</strong>
+                                <br />
+                                {workspace.teacher_comment}
                             </div>
+                        )}
+                    </div>
 
-                            <div className="space-y-2">
-                                <a
-                                    href="/cargo-plan"
-                                    className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Atvērt kravas plānu
-                                </a>
+                    <div className="flex flex-wrap gap-3">
+                        <Link
+                            href="/student/tasks"
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                            <ClipboardCheck className="h-4 w-4" />
+                            Mani uzdevumi
+                        </Link>
 
-                                <a
-                                    href="/stability"
-                                    className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Pārbaudīt stabilitāti
-                                </a>
-
-                                <a
-                                    href="/ballast"
-                                    className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Veikt balasta korekciju
-                                </a>
-
-                                <a
-                                    href="/reports"
-                                    className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Ģenerēt pārskatu
-                                </a>
-                            </div>
-                        </div>
+                        {assignment && (
+                            <Link
+                                href={`/student/tasks/${assignment.id}`}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                            >
+                                Atvērt uzdevumu
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard
+                    title="Kopā uzdevumi"
+                    value={formatNumber(stats.total, 0)}
+                    description="Visi piešķirtie uzdevumi"
+                    icon={ClipboardList}
+                />
+
+                <StatCard
+                    title="Risināšanā"
+                    value={formatNumber(stats.in_progress, 0)}
+                    description="Pašlaik aktīvie risinājumi"
+                    icon={Activity}
+                />
+
+                <StatCard
+                    title="Iesniegti"
+                    value={formatNumber(stats.submitted, 0)}
+                    description="Gaida vērtējumu"
+                    icon={FileText}
+                />
+
+                <StatCard
+                    title="Novērtēti"
+                    value={formatNumber(stats.graded, 0)}
+                    description="Darbi ar vērtējumu"
+                    icon={CheckCircle2}
+                />
+            </div>
+
+            {analysis && (
+                <>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <StatCard
+                            title="Displacement"
+                            value={`${formatNumber(metrics.displacement)} t`}
+                            description={`Krava ${formatNumber(metrics.cargo_weight)} t · Balasts ${formatNumber(metrics.ballast_weight)} t`}
+                            icon={PackageOpen}
+                        />
+
+                        <StatCard
+                            title="GM"
+                            value={`${formatNumber(metrics.gm, 3)} m`}
+                            description={`KG ${formatNumber(metrics.kg, 3)} m · KM ${formatNumber(metrics.km, 3)} m`}
+                            icon={Scale}
+                        />
+
+                        <StatCard
+                            title="Trim"
+                            value={`${formatNumber(metrics.trim, 3)} m`}
+                            description={metrics.trim_direction ?? '-'}
+                            icon={Ship}
+                        />
+
+                        <StatCard
+                            title="Heel"
+                            value={`${formatNumber(metrics.heel, 3)}°`}
+                            description={`Fail: ${failCount} · Warning: ${warningCount}`}
+                            icon={warningCount > 0 || failCount > 0 ? AlertTriangle : Waves}
+                        />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <QuickLink
+                            href="/cargo-plan"
+                            icon={PackageOpen}
+                            title="Kravas plāns"
+                            description="Pārbaudi vai rediģē kravas izvietojumu."
+                        />
+
+                        <QuickLink
+                            href="/ballast"
+                            icon={Waves}
+                            title="Balasts"
+                            description="Pārbaudi vai rediģē balasta tanku stāvokli."
+                        />
+
+                        <QuickLink
+                            href="/stability"
+                            icon={Activity}
+                            title="Stabilitāte"
+                            description="Apskati GM, trim, heel un kritērijus."
+                        />
+
+                        <QuickLink
+                            href="/reports"
+                            icon={FileText}
+                            title="Atskaites"
+                            description="Ģenerē pārskatu vai PDF par risinājumu."
+                        />
+                    </div>
+
+                    {criteria.length > 0 && (
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div className="border-b border-slate-200 px-5 py-4">
+                                <h3 className="text-base font-semibold text-slate-950">
+                                    Kritēriju kopsavilkums
+                                </h3>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[760px] text-left">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Kritērijs</th>
+                                            <th className="px-4 py-3 font-semibold">Prasība</th>
+                                            <th className="px-4 py-3 font-semibold">Faktiski</th>
+                                            <th className="px-4 py-3 font-semibold">Statuss</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {criteria.slice(0, 6).map((criterion, index) => (
+                                            <tr
+                                                key={`${criterion.name ?? 'criterion'}-${index}`}
+                                                className="border-b border-slate-100 last:border-0"
+                                            >
+                                                <td className="px-4 py-4 text-sm font-semibold text-slate-950">
+                                                    {criterion.name ?? '-'}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-slate-600">
+                                                    {criterion.requirement ?? '-'}
+                                                </td>
+                                                <td className="px-4 py-4 text-sm text-slate-600">
+                                                    {criterion.actual ?? '-'}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${criteriaBadge(criterion.status)}`}>
+                                                        {criterion.status ?? '-'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {recentAssignments.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 className="text-base font-semibold text-slate-950">
+                        Pēdējie uzdevumi
+                    </h3>
+
+                    <div className="mt-4 space-y-3">
+                        {recentAssignments.map((item) => (
+                            <Link
+                                key={item.id}
+                                href={`/student/tasks/${item.id}`}
+                                className="block rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                            >
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <div className="mb-2 inline-flex rounded-full px-3 py-1 text-xs font-medium ring-1">
+                                            {statusLabel(item.status)}
+                                        </div>
+                                        <p className="font-semibold text-slate-950">
+                                            {item.scenario?.title ?? '-'}
+                                        </p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            {item.vessel?.name ?? '-'} · IMO {item.vessel?.imo_number ?? '-'}
+                                        </p>
+                                    </div>
+
+                                    {item.score !== null && item.score !== undefined && (
+                                        <div className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+                                            {formatNumber(item.score, 1)}/10
+                                        </div>
+                                    )}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function TeacherDashboardView({
+    teacherDashboard,
+}: {
+    teacherDashboard?: TeacherDashboard;
+}) {
+    const stats = {
+        submissions_total: 0,
+        submissions_pending: 0,
+        submissions_graded: 0,
+        average_score: null,
+        scenarios_total: 0,
+        scenarios_published: 0,
+        vessels_total: 0,
+        ...teacherDashboard?.stats,
+    };
+
+    const recentSubmissions = Array.isArray(teacherDashboard?.recent_submissions)
+        ? teacherDashboard?.recent_submissions ?? []
+        : [];
+
+    return (
+        <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-slate-950">
+                            Pasniedzēja pārskats
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                            Šeit redzami iesniegumi, scenāriji un ātrās darbības studentu darbu vērtēšanai.
+                        </p>
+                    </div>
+
+                    <Link
+                        href="/teacher/submissions"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        <GraduationCap className="h-4 w-4" />
+                        Atvērt iesniegumus
+                    </Link>
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard
+                    title="Iesniegumi"
+                    value={formatNumber(stats.submissions_total, 0)}
+                    description="Visi studentu iesniegumi"
+                    icon={FileText}
+                />
+
+                <StatCard
+                    title="Gaida vērtējumu"
+                    value={formatNumber(stats.submissions_pending, 0)}
+                    description="Statuss: submitted"
+                    icon={AlertTriangle}
+                />
+
+                <StatCard
+                    title="Novērtēti"
+                    value={formatNumber(stats.submissions_graded, 0)}
+                    description="Statuss: graded"
+                    icon={CheckCircle2}
+                />
+
+                <StatCard
+                    title="Vidējais vērtējums"
+                    value={
+                        stats.average_score === null || stats.average_score === undefined
+                            ? '-'
+                            : `${formatNumber(stats.average_score, 2)}/10`
+                    }
+                    description="No novērtētajiem darbiem"
+                    icon={Scale}
+                />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                <QuickLink
+                    href="/scenarios"
+                    icon={ClipboardList}
+                    title="Scenāriji"
+                    description={`${formatNumber(stats.scenarios_published, 0)} publicēti no ${formatNumber(stats.scenarios_total, 0)} scenārijiem.`}
+                />
+
+                <QuickLink
+                    href="/teacher/submissions"
+                    icon={GraduationCap}
+                    title="Vērtēšana"
+                    description="Atver studentu iesniegumus un vērtē snapshot rezultātus."
+                />
+
+                <QuickLink
+                    href="/teacher/analytics"
+                    icon={BarChart3}
+                    title="Analītika"
+                    description="Skati rezultātu sadalījumu, kļūdas un scenāriju statistiku."
+                />
+            </div>
+
+            <RecentSubmissionsTable submissions={recentSubmissions} />
+        </div>
+    );
+}
+
+function AdminDashboardView({
+    adminDashboard,
+}: {
+    adminDashboard?: AdminDashboard;
+}) {
+    const stats = {
+        users_total: 0,
+        students_total: 0,
+        teachers_total: 0,
+        admins_total: 0,
+        vessels_total: 0,
+        active_vessels_total: 0,
+        scenarios_total: 0,
+        published_scenarios_total: 0,
+        submissions_total: 0,
+        graded_submissions_total: 0,
+        ...adminDashboard?.stats,
+    };
+
+    const recentSubmissions = Array.isArray(adminDashboard?.recent_submissions)
+        ? adminDashboard?.recent_submissions ?? []
+        : [];
+
+    return (
+        <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-slate-950">
+                            Administratora pārskats
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                            Sistēmas lietotāju, kuģu, scenāriju un iesniegumu kopsavilkums.
+                        </p>
+                    </div>
+
+                    <Link
+                        href="/settings"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Iestatījumi
+                    </Link>
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard
+                    title="Lietotāji"
+                    value={formatNumber(stats.users_total, 0)}
+                    description={`Studenti ${formatNumber(stats.students_total, 0)} · Pasniedzēji ${formatNumber(stats.teachers_total, 0)}`}
+                    icon={Users}
+                />
+
+                <StatCard
+                    title="Kuģi"
+                    value={formatNumber(stats.vessels_total, 0)}
+                    description={`${formatNumber(stats.active_vessels_total, 0)} aktīvi`}
+                    icon={Ship}
+                />
+
+                <StatCard
+                    title="Scenāriji"
+                    value={formatNumber(stats.scenarios_total, 0)}
+                    description={`${formatNumber(stats.published_scenarios_total, 0)} publicēti`}
+                    icon={ClipboardList}
+                />
+
+                <StatCard
+                    title="Iesniegumi"
+                    value={formatNumber(stats.submissions_total, 0)}
+                    description={`${formatNumber(stats.graded_submissions_total, 0)} novērtēti`}
+                    icon={FileText}
+                />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                <QuickLink
+                    href="/vessels"
+                    icon={Ship}
+                    title="Kuģi"
+                    description="Pārslēdz aktīvo kuģi un apskati kuģu datubāzi."
+                />
+
+                <QuickLink
+                    href="/scenarios"
+                    icon={ClipboardList}
+                    title="Scenāriji"
+                    description="Pārvaldi mācību un eksāmena scenārijus."
+                />
+
+                <QuickLink
+                    href="/teacher/analytics"
+                    icon={BarChart3}
+                    title="Analītika"
+                    description="Skati kopējo sistēmas rezultātu analīzi."
+                />
+            </div>
+
+            <RecentSubmissionsTable submissions={recentSubmissions} />
+        </div>
+    );
+}
+
+function RecentSubmissionsTable({
+    submissions,
+}: {
+    submissions: SubmissionItem[];
+}) {
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-5 py-4">
+                <h3 className="text-base font-semibold text-slate-950">
+                    Pēdējie iesniegumi
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                    Jaunākie studentu iesniegtie risinājumi.
+                </p>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-left">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th className="px-4 py-3 font-semibold">Students</th>
+                            <th className="px-4 py-3 font-semibold">Scenārijs</th>
+                            <th className="px-4 py-3 font-semibold">Kuģis</th>
+                            <th className="px-4 py-3 font-semibold">GM</th>
+                            <th className="px-4 py-3 font-semibold">Kritēriji</th>
+                            <th className="px-4 py-3 font-semibold">Statuss</th>
+                            <th className="px-4 py-3 font-semibold">Darbība</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {submissions.map((submission) => {
+                            const failCount = toNumber(submission.criteria_summary?.fail);
+                            const warningCount = toNumber(submission.criteria_summary?.warning);
+
+                            return (
+                                <tr
+                                    key={submission.id}
+                                    className="border-b border-slate-100 last:border-0"
+                                >
+                                    <td className="px-4 py-4">
+                                        <div className="text-sm font-semibold text-slate-950">
+                                            {submission.student?.name ?? '-'}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                            {submission.student?.email ?? '-'}
+                                        </div>
+                                    </td>
+
+                                    <td className="px-4 py-4 text-sm text-slate-700">
+                                        {submission.scenario?.title ?? '-'}
+                                    </td>
+
+                                    <td className="px-4 py-4 text-sm text-slate-700">
+                                        {submission.vessel?.name ?? '-'}
+                                    </td>
+
+                                    <td className="px-4 py-4 text-sm text-slate-700">
+                                        {formatNumber(submission.metrics?.gm, 3)} m
+                                    </td>
+
+                                    <td className="px-4 py-4 text-sm text-slate-700">
+                                        Fail: {formatNumber(failCount, 0)} · Warning: {formatNumber(warningCount, 0)}
+                                    </td>
+
+                                    <td className="px-4 py-4">
+                                        <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${statusBadge(submission.status)}`}>
+                                            {statusLabel(submission.status)}
+                                        </span>
+                                    </td>
+
+                                    <td className="px-4 py-4">
+                                        <Link
+                                            href={`/teacher/submissions/${submission.id}`}
+                                            className="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                        >
+                                            Atvērt
+                                        </Link>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {submissions.length === 0 && (
+                <div className="border-t border-slate-100 px-5 py-8 text-center text-sm text-slate-500">
+                    Iesniegumi vēl nav atrasti.
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function Dashboard({
+    mode = 'student',
+    analysis,
+    workspace,
+    studentDashboard,
+    teacherDashboard,
+    adminDashboard,
+}: DashboardProps) {
+    return (
+        <AuthenticatedLayout
+            title="Pārskats"
+            subtitle="Sistēmas sākuma panelis pēc lietotāja lomas"
+        >
+            <Head title="Pārskats" />
+
+            {mode === 'student' && (
+                <StudentDashboardView
+                    analysis={analysis}
+                    workspace={workspace}
+                    studentDashboard={studentDashboard}
+                />
+            )}
+
+            {mode === 'teacher' && (
+                <TeacherDashboardView teacherDashboard={teacherDashboard} />
+            )}
+
+            {mode === 'admin' && (
+                <AdminDashboardView adminDashboard={adminDashboard} />
+            )}
         </AuthenticatedLayout>
     );
 }

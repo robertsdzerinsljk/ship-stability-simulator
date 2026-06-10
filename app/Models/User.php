@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -44,4 +45,18 @@ class User extends Authenticatable
     {
     return $this->hasMany(Submission::class);
     }
+    public function studentGroups(): BelongsToMany
+{
+    return $this->belongsToMany(StudentGroup::class, 'student_group_user')
+        ->withPivot([
+            'member_role',
+            'status',
+            'external_source',
+            'external_membership_id',
+            'joined_at',
+            'synced_at',
+        ])
+        ->withTimestamps()
+        ->wherePivot('status', 'active');
+}
 }

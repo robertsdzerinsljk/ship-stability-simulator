@@ -10,8 +10,11 @@ use App\Http\Controllers\StabilityController;
 use App\Http\Controllers\StudentTaskController;
 use App\Http\Controllers\TeacherAnalyticsController;
 use App\Http\Controllers\TeacherSubmissionController;
+use App\Http\Controllers\TeacherAssignmentController;
 use App\Http\Controllers\VesselController;
+use App\Http\Controllers\TeacherStudentController;
 use Illuminate\Support\Facades\Route;
+
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -85,6 +88,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/teacher/analytics', [TeacherAnalyticsController::class, 'index'])
             ->name('teacher.analytics.index');
+
+        Route::get('/teacher/assignments', [TeacherAssignmentController::class, 'index'])->name('teacher.assignments.index');
+        Route::post('/teacher/assignments', [TeacherAssignmentController::class, 'store'])->name('teacher.assignments.store');
+
+        Route::get('/teacher/students', [TeacherStudentController::class, 'index'])->name('teacher.students.index');
     });
 
     Route::middleware(['role.any:admin'])->group(function () {

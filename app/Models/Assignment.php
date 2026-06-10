@@ -17,6 +17,7 @@ class Assignment extends Model
         'started_at',
         'submitted_at',
         'due_at',
+        'student_group_id',
     ];
 
     protected function casts(): array
@@ -52,4 +53,8 @@ class Assignment extends Model
     {
     return $this->hasOne(AssignmentSolution::class);
     }
+    public function studentGroup(): BelongsTo
+{
+    return $this->belongsTo(StudentGroup::class);
+}
 }

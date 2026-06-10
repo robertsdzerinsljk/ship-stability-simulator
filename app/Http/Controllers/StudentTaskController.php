@@ -18,7 +18,7 @@ class StudentTaskController extends Controller
 {
     public function index(Request $request): Response
     {
-        $this->ensurePublishedScenariosAreAssignedToCurrentUser($request);
+
 
         $assignments = Assignment::query()
             ->with([

@@ -81,6 +81,12 @@ const navigation: NavItem[] = [
         roles: ['student', 'teacher', 'admin'],
     },
     {
+        label: 'Studenti un grupas',
+        href: '/teacher/students',
+        icon: GraduationCap,
+        roles: ['teacher', 'admin'],
+    },
+    {
         label: 'Iesniegumi',
         href: '/teacher/submissions',
         icon: GraduationCap,

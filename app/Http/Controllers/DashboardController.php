@@ -9,7 +9,6 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\Vessel;
 use App\Support\ActiveAssignmentSolution;
-use App\Support\ActiveVessel;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

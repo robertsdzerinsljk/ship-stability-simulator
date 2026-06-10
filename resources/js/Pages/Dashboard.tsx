@@ -20,6 +20,15 @@ import {
 
 type DashboardMode = 'student' | 'teacher' | 'admin';
 
+type HoldLoad = {
+    name?: string;
+    code?: string;
+    weight_tonnes?: number | string | null;
+    capacity_tonnes?: number | string | null;
+    load_percent?: number | string | null;
+    lcg?: number | string | null;
+};
+
 type Analysis = {
     vessel?: {
         id?: number;
@@ -56,6 +65,7 @@ type Analysis = {
         status?: string;
         comment?: string;
     }[];
+    hold_loads?: HoldLoad[];
 };
 
 type Workspace = {
@@ -254,6 +264,42 @@ function criteriaBadge(status?: string) {
     return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
 }
 
+function criteriaLabel(status?: string) {
+    if (status === 'fail') {
+        return 'Neatbilst';
+    }
+
+    if (status === 'warning') {
+        return 'Jāpārbauda';
+    }
+
+    if (status === 'pass') {
+        return 'Atbilst';
+    }
+
+    return status ?? '-';
+}
+
+function loadStatusText(loadPercent: number) {
+    if (loadPercent > 100) {
+        return 'Pārsniegts';
+    }
+
+    if (loadPercent >= 90) {
+        return 'Augsta noslodze';
+    }
+
+    if (loadPercent >= 60) {
+        return 'Optimāli';
+    }
+
+    if (loadPercent > 0) {
+        return 'Zema noslodze';
+    }
+
+    return 'Tukšs';
+}
+
 function StatCard({
     title,
     value,
@@ -314,6 +360,367 @@ function QuickLink({
     );
 }
 
+function shipLoadColor(loadPercent: number) {
+    if (loadPercent > 100) {
+        return '#dc2626';
+    }
+
+    if (loadPercent >= 90) {
+        return '#f59e0b';
+    }
+
+    if (loadPercent >= 60) {
+        return '#22c55e';
+    }
+
+    if (loadPercent > 0) {
+        return '#0ea5e9';
+    }
+
+    return '#cbd5e1';
+}
+
+function shipLoadLabel(loadPercent: number) {
+    if (loadPercent > 100) {
+        return 'Pārslogots';
+    }
+
+    if (loadPercent >= 90) {
+        return 'Augsta noslodze';
+    }
+
+    if (loadPercent >= 60) {
+        return 'Labi';
+    }
+
+    if (loadPercent > 0) {
+        return 'Zema noslodze';
+    }
+
+    return 'Tukšs';
+}
+
+function ShipCargoSideProfile({
+    holdLoads,
+    vesselName,
+    metrics,
+}: {
+    holdLoads: HoldLoad[];
+    vesselName?: string | null;
+    metrics?: Analysis['metrics'];
+}) {
+    if (holdLoads.length === 0) {
+        return null;
+    }
+
+    const visibleHolds = holdLoads.slice(0, 10);
+    const holdCount = Math.max(visibleHolds.length, 1);
+
+    const startX = 185;
+    const endX = 770;
+    const gap = 7;
+    const availableWidth = endX - startX;
+    const holdWidth = (availableWidth - gap * (holdCount - 1)) / holdCount;
+
+    const overloadedCount = visibleHolds.filter((hold) => toNumber(hold.load_percent) > 100).length;
+    const warningCount = visibleHolds.filter((hold) => {
+        const load = toNumber(hold.load_percent);
+        return load >= 90 && load <= 100;
+    }).length;
+
+    const averageLoad =
+        visibleHolds.reduce((sum, hold) => sum + toNumber(hold.load_percent), 0) /
+        Math.max(visibleHolds.length, 1);
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-5 py-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h3 className="text-base font-semibold text-slate-950">
+                            Kuģa stāvokļa kopsavilkums
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Kuģa sānskats ar kravas tilpņu aizpildījumu un galvenajiem stabilitātes rādītājiem.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
+                            Vidējā noslodze: {formatNumber(averageLoad, 1)}%
+                        </span>
+
+                        <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700 ring-1 ring-amber-100">
+                            Brīdinājumi: {formatNumber(warningCount, 0)}
+                        </span>
+
+                        <span className="rounded-full bg-red-50 px-3 py-1 font-medium text-red-700 ring-1 ring-red-100">
+                            Pārslogoti: {formatNumber(overloadedCount, 0)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-5">
+                <div className="rounded-3xl border border-slate-200 bg-gradient-to-b from-sky-50 to-white p-4">
+                    <svg
+                        viewBox="0 0 960 330"
+                        className="h-auto w-full"
+                        role="img"
+                        aria-label="Kuģa sānskats ar kravas tilpņu noslodzi"
+                    >
+                        <defs>
+                            <linearGradient id="shipHullGradient" x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0%" stopColor="#1f2937" />
+                                <stop offset="100%" stopColor="#020617" />
+                            </linearGradient>
+
+                            <linearGradient id="shipDeckGradient" x1="0" x2="1" y1="0" y2="0">
+                                <stop offset="0%" stopColor="#f8fafc" />
+                                <stop offset="100%" stopColor="#e2e8f0" />
+                            </linearGradient>
+
+                            <filter id="shipShadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow
+                                    dx="0"
+                                    dy="8"
+                                    stdDeviation="8"
+                                    floodColor="#0f172a"
+                                    floodOpacity="0.18"
+                                />
+                            </filter>
+                        </defs>
+
+                        <rect x="0" y="0" width="960" height="330" rx="28" fill="#f8fafc" />
+
+                        <path
+                            d="M55 258 C175 285 740 292 890 258"
+                            stroke="#bae6fd"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            fill="none"
+                        />
+
+                        <path
+                            d="M92 214 L810 214 C855 214 893 202 922 177 L875 260 C820 289 195 289 102 260 Z"
+                            fill="url(#shipHullGradient)"
+                            filter="url(#shipShadow)"
+                        />
+
+                        <path
+                            d="M120 207 L818 207"
+                            stroke="#94a3b8"
+                            strokeWidth="5"
+                            strokeLinecap="round"
+                        />
+
+                        <path
+                            d="M90 214 L122 174 L152 214 Z"
+                            fill="#111827"
+                        />
+
+                        <path
+                            d="M810 214 L900 178 L855 214 Z"
+                            fill="#111827"
+                        />
+
+                        <rect
+                            x="124"
+                            y="151"
+                            width="690"
+                            height="12"
+                            rx="5"
+                            fill="url(#shipDeckGradient)"
+                            stroke="#cbd5e1"
+                        />
+
+                        <rect x="105" y="103" width="58" height="47" rx="5" fill="#f8fafc" stroke="#94a3b8" />
+                        <rect x="116" y="86" width="40" height="22" rx="4" fill="#e2e8f0" stroke="#94a3b8" />
+                        <rect x="123" y="70" width="24" height="18" rx="3" fill="#f8fafc" stroke="#94a3b8" />
+
+                        <rect x="115" y="113" width="11" height="9" rx="1" fill="#38bdf8" opacity="0.75" />
+                        <rect x="133" y="113" width="11" height="9" rx="1" fill="#38bdf8" opacity="0.75" />
+                        <rect x="151" y="113" width="7" height="9" rx="1" fill="#38bdf8" opacity="0.75" />
+
+                        <line x1="135" y1="70" x2="135" y2="36" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
+                        <line x1="137" y1="45" x2="180" y2="62" stroke="#64748b" strokeWidth="3" strokeLinecap="round" />
+
+                        <line x1="300" y1="151" x2="278" y2="82" stroke="#64748b" strokeWidth="4" strokeLinecap="round" />
+                        <line x1="278" y1="82" x2="350" y2="116" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+
+                        <line x1="470" y1="151" x2="448" y2="82" stroke="#64748b" strokeWidth="4" strokeLinecap="round" />
+                        <line x1="448" y1="82" x2="520" y2="116" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+
+                        <line x1="640" y1="151" x2="618" y2="82" stroke="#64748b" strokeWidth="4" strokeLinecap="round" />
+                        <line x1="618" y1="82" x2="690" y2="116" stroke="#94a3b8" strokeWidth="3" strokeLinecap="round" />
+
+                        {visibleHolds.map((hold, index) => {
+                            const loadPercent = toNumber(hold.load_percent);
+                            const safeLoadPercent = Math.min(Math.max(loadPercent, 0), 100);
+                            const x = startX + index * (holdWidth + gap);
+                            const outerY = 161;
+                            const outerHeight = 54;
+                            const fillHeight = Math.max((safeLoadPercent / 100) * outerHeight, loadPercent > 0 ? 8 : 0);
+                            const fillY = outerY + outerHeight - fillHeight;
+                            const color = shipLoadColor(loadPercent);
+
+                            return (
+                                <g key={`${hold.code ?? 'hold'}-${index}`}>
+                                    <rect
+                                        x={x}
+                                        y={outerY}
+                                        width={holdWidth}
+                                        height={outerHeight}
+                                        rx="5"
+                                        fill="#ffffff"
+                                        stroke="#cbd5e1"
+                                        strokeWidth="1.5"
+                                    />
+
+                                    <rect
+                                        x={x + 2}
+                                        y={fillY}
+                                        width={holdWidth - 4}
+                                        height={fillHeight}
+                                        rx="4"
+                                        fill={color}
+                                        opacity="0.95"
+                                    />
+
+                                    {loadPercent > 100 && (
+                                        <rect
+                                            x={x + 2}
+                                            y={outerY + 2}
+                                            width={holdWidth - 4}
+                                            height="8"
+                                            rx="3"
+                                            fill="#991b1b"
+                                        />
+                                    )}
+
+                                    <text
+                                        x={x + holdWidth / 2}
+                                        y={outerY + 22}
+                                        textAnchor="middle"
+                                        fontSize="11"
+                                        fontWeight="700"
+                                        fill="#0f172a"
+                                    >
+                                        {hold.code ?? `H${index + 1}`}
+                                    </text>
+
+                                    <text
+                                        x={x + holdWidth / 2}
+                                        y={outerY + 40}
+                                        textAnchor="middle"
+                                        fontSize="11"
+                                        fontWeight="700"
+                                        fill="#0f172a"
+                                    >
+                                        {formatNumber(loadPercent, 0)}%
+                                    </text>
+                                </g>
+                            );
+                        })}
+
+                        <text
+                            x="125"
+                            y="295"
+                            fontSize="13"
+                            fontWeight="700"
+                            fill="#0f172a"
+                        >
+                            {vesselName ?? 'Kuģis'}
+                        </text>
+
+                        <text
+                            x="125"
+                            y="313"
+                            fontSize="11"
+                            fill="#64748b"
+                        >
+                            Kravas tilpņu noslodze pēc aktīvā risinājuma
+                        </text>
+                    </svg>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">Priekšgala iegrime</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.fore_draft, 2)} m
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">Pakaļgala iegrime</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.aft_draft, 2)} m
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">GM</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.gm, 3)} m
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">Trims</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.trim, 3)} m
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">Sasvērums</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.heel, 3)}°
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <p className="text-xs font-medium text-slate-500">Kopējā krava</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">
+                            {formatNumber(metrics?.cargo_weight, 2)} t
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 text-xs text-slate-500 md:grid-cols-5">
+                    <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                        Tukšs
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+                        Zema noslodze
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        Labi
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                        Augsta noslodze
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
+                        Pārslogots
+                    </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-100">
+                    Šis sānskats ir paredzēts ātrai situācijas uztverei — students uzreiz redz,
+                    kuras kravas tilpnes ir vairāk noslogotas un kurās varētu būt nepieciešama
+                    kravas pārdale.
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function StudentDashboardView({
     analysis,
     workspace,
@@ -359,6 +766,8 @@ function StudentDashboardView({
     };
 
     const criteria = Array.isArray(analysis?.criteria) ? analysis?.criteria ?? [] : [];
+    const holdLoads = Array.isArray(analysis?.hold_loads) ? analysis?.hold_loads ?? [] : [];
+
     const failCount = criteria.filter((item) => item.status === 'fail').length;
     const warningCount = criteria.filter((item) => item.status === 'warning').length;
 
@@ -393,7 +802,7 @@ function StudentDashboardView({
 
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                             {assignment
-                                ? `Kuģis: ${vessel.name} · IMO ${vessel.imo_number}. Šeit redzams tavs aktuālais darba stāvoklis un galvenie stabilitātes rādītāji.`
+                                ? `Kuģis: ${vessel.name} · IMO ${vessel.imo_number}. Šeit redzams tavs aktuālais darba stāvoklis, kravas tilpņu noslodze un galvenie stabilitātes rādītāji.`
                                 : 'Tev pašlaik nav aktīva uzdevuma. Atver sadaļu “Mani uzdevumi”, lai sāktu risināšanu.'}
                         </p>
 
@@ -489,6 +898,12 @@ function StudentDashboardView({
                         />
                     </div>
 
+                    <ShipCargoSideProfile
+    holdLoads={holdLoads}
+    vesselName={vessel.name}
+    metrics={metrics}
+/>
+
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <QuickLink
                             href="/cargo-plan"
@@ -555,7 +970,7 @@ function StudentDashboardView({
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${criteriaBadge(criterion.status)}`}>
-                                                        {criterion.status ?? '-'}
+                                                        {criteriaLabel(criterion.status)}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -583,7 +998,7 @@ function StudentDashboardView({
                             >
                                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div>
-                                        <div className="mb-2 inline-flex rounded-full px-3 py-1 text-xs font-medium ring-1">
+                                        <div className={`mb-2 inline-flex rounded-full px-3 py-1 text-xs font-medium ring-1 ${statusBadge(item.status)}`}>
                                             {statusLabel(item.status)}
                                         </div>
                                         <p className="font-semibold text-slate-950">

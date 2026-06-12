@@ -2,399 +2,407 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { type PageProps } from '@/types';
 import {
-    AlertTriangle,
-    BookOpen,
+    ArrowLeft,
     CheckCircle2,
     ClipboardCheck,
+    ClipboardList,
     FileText,
     PackageOpen,
-    PlayCircle,
-    Save,
+    Play,
     Scale,
     Ship,
     Waves,
 } from 'lucide-react';
-import { FormEvent, useState } from 'react';
-
-type AssignmentStatus = 'assigned' | 'in_progress' | 'submitted' | 'graded';
+import { useState } from 'react';
 
 type Assignment = {
     id: number;
-    status: AssignmentStatus;
-    assigned_at_display?: string;
-    started_at_display?: string;
-    submitted_at_display?: string;
-    due_at_display?: string;
-    scenario: {
-        id: number;
-        title: string;
-        short_description?: string;
-        task_text?: string;
-        final_requirements?: string;
-        student_hints?: string;
-        course?: string;
-        difficulty: 'easy' | 'medium' | 'hard';
-        mode: 'training' | 'exam';
-        estimated_minutes?: number;
-        show_hints: boolean;
-        allow_solution_comparison: boolean;
-        vessel_name?: string;
-        vessel_imo?: string;
-        cargo_plan_name?: string;
+    status?: string | null;
+    assigned_at?: string | null;
+    started_at?: string | null;
+    submitted_at?: string | null;
+    due_at?: string | null;
+    is_assigned?: boolean;
+    is_in_progress?: boolean;
+    is_submitted?: boolean;
+    is_graded?: boolean;
+    student_group?: {
+        id?: number | null;
+        name?: string | null;
+        code?: string | null;
+        academic_year?: string | null;
+    } | null;
+    scenario?: {
+        id?: number | null;
+        title?: string | null;
+        description?: string | null;
+        difficulty?: string | null;
+        mode?: string | null;
+    };
+    vessel?: {
+        id?: number | null;
+        name?: string | null;
+        type?: string | null;
+        imo_number?: string | null;
     };
     submission?: {
-        id: number;
-        status: string;
-        student_comment?: string;
-        teacher_comment?: string;
-        score?: string;
-        submitted_at_display?: string;
+        id?: number | null;
+        status?: string | null;
+        submitted_at?: string | null;
+        score?: number | string | null;
+        teacher_comment?: string | null;
+        has_feedback?: boolean;
     } | null;
 };
 
-type StudentTaskShowProps = {
+type StudentTasksShowProps = {
     assignment: Assignment;
 };
 
-type StudentTaskPageProps = PageProps<{
+type StudentTasksPageProps = PageProps<{
     flash?: {
         success?: string;
         error?: string;
     };
-    errors?: Record<string, string>;
 }>;
 
-function statusLabel(status: AssignmentStatus) {
-    if (status === 'submitted') return 'Iesniegts';
-    if (status === 'graded') return 'Novērtēts';
-    if (status === 'in_progress') return 'Procesā';
-    return 'Piešķirts';
+function toNumber(value: number | string | null | undefined) {
+    const number = Number(value ?? 0);
+
+    return Number.isFinite(number) ? number : 0;
 }
 
-function statusBadge(status: AssignmentStatus) {
-    if (status === 'submitted' || status === 'graded') {
-        return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+function formatNumber(value: number | string | null | undefined, digits = 1) {
+    return toNumber(value).toLocaleString('lv-LV', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+}
+
+function statusLabel(status?: string | null) {
+    if (status === 'assigned') {
+        return 'Piešķirts';
     }
 
     if (status === 'in_progress') {
+        return 'Risināšanā';
+    }
+
+    if (status === 'submitted') {
+        return 'Iesniegts';
+    }
+
+    if (status === 'graded') {
+        return 'Novērtēts';
+    }
+
+    return status ?? 'Nav statusa';
+}
+
+function statusBadge(status?: string | null) {
+    if (status === 'graded') {
+        return 'bg-emerald-50 text-emerald-700 ring-emerald-100';
+    }
+
+    if (status === 'submitted') {
         return 'bg-blue-50 text-blue-700 ring-blue-100';
     }
 
-    return 'bg-amber-50 text-amber-700 ring-amber-100';
+    if (status === 'in_progress') {
+        return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    return 'bg-slate-50 text-slate-700 ring-slate-100';
 }
 
-function modeLabel(mode: 'training' | 'exam') {
-    return mode === 'exam' ? 'Eksāmena režīms' : 'Mācību režīms';
+function difficultyLabel(value?: string | null) {
+    if (value === 'easy') {
+        return 'Viegls';
+    }
+
+    if (value === 'medium') {
+        return 'Vidējs';
+    }
+
+    if (value === 'hard') {
+        return 'Sarežģīts';
+    }
+
+    if (value === 'exam') {
+        return 'Eksāmens';
+    }
+
+    return value ?? '-';
 }
 
-function ActionLink({
-    href,
-    icon: Icon,
-    title,
-    description,
-}: {
-    href: string;
-    icon: typeof PackageOpen;
-    title: string;
-    description: string;
-}) {
-    return (
-        <Link
-            href={href}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                <Icon className="h-5 w-5" />
-            </div>
+export default function StudentTasksShow({ assignment }: StudentTasksShowProps) {
+    const { props } = usePage<StudentTasksPageProps>();
+    const [starting, setStarting] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-            <h3 className="text-sm font-semibold text-slate-950">
-                {title}
-            </h3>
-
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-                {description}
-            </p>
-        </Link>
-    );
-}
-
-export default function StudentTaskShow({ assignment }: StudentTaskShowProps) {
-    const { props } = usePage<StudentTaskPageProps>();
-    const success = props.flash?.success;
-    const error = props.flash?.error;
-    const validationError = props.errors?.student_comment;
-
-    const [comment, setComment] = useState(assignment.submission?.student_comment ?? '');
-    const [processing, setProcessing] = useState(false);
+    const isAssigned = assignment.status === 'assigned';
+    const isInProgress = assignment.status === 'in_progress';
+    const isSubmitted = assignment.status === 'submitted';
+    const isGraded = assignment.status === 'graded';
+    const isLocked = isSubmitted || isGraded;
+    const score = assignment.submission?.score;
 
     const startTask = () => {
+        setStarting(true);
+
         router.post(
             `/student/tasks/${assignment.id}/start`,
             {},
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onFinish: () => setStarting(false),
+            },
         );
     };
 
-    const submitFinal = (event: FormEvent) => {
-        event.preventDefault();
+    const submitTask = () => {
+        if (!confirm('Vai tiešām iesniegt darbu? Pēc iesniegšanas kravu un balastu vairs nevarēs labot.')) {
+            return;
+        }
 
-        setProcessing(true);
+        setSubmitting(true);
 
         router.post(
             `/student/tasks/${assignment.id}/submit`,
-            {
-                student_comment: comment,
-            },
+            {},
             {
                 preserveScroll: true,
-                onFinish: () => setProcessing(false),
+                onFinish: () => setSubmitting(false),
             },
         );
     };
-
-    const isExam = assignment.scenario.mode === 'exam';
-    const canShowHints = assignment.scenario.show_hints && !isExam;
-    const alreadySubmitted = assignment.status === 'submitted' || assignment.status === 'graded';
 
     return (
         <AuthenticatedLayout
             title="Uzdevums"
-            subtitle="Studenta scenārija apraksts un darba soļi"
+            subtitle="Studenta piešķirtā scenārija darba skats"
         >
-            <Head title={assignment.scenario.title} />
+            <Head title={assignment.scenario?.title ?? 'Uzdevums'} />
 
             <div className="space-y-6">
-                {success && (
+                {props.flash?.success && (
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                        {success}
+                        {props.flash.success}
                     </div>
                 )}
 
-                {(error || validationError) && (
+                {props.flash?.error && (
                     <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {error ?? validationError}
+                        {props.flash.error}
                     </div>
                 )}
+
+                <div className="flex items-center justify-between gap-4">
+                    <Link
+                        href="/student/tasks"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Atpakaļ uz uzdevumiem
+                    </Link>
+
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${statusBadge(assignment.status)}`}>
+                        {statusLabel(assignment.status)}
+                    </span>
+                </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                            <div className="mb-3 flex flex-wrap gap-2">
-                                <span className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ${statusBadge(assignment.status)}`}>
-                                    {statusLabel(assignment.status)}
+                            <div className="mb-3 flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    {difficultyLabel(assignment.scenario?.difficulty)}
                                 </span>
 
-                                <span
-                                    className={[
-                                        'rounded-full px-3 py-1 text-xs font-medium ring-1',
-                                        isExam
-                                            ? 'bg-red-50 text-red-700 ring-red-100'
-                                            : 'bg-blue-50 text-blue-700 ring-blue-100',
-                                    ].join(' ')}
-                                >
-                                    {modeLabel(assignment.scenario.mode)}
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    {assignment.scenario?.mode ?? '-'}
                                 </span>
 
-                                {assignment.due_at_display && (
+                                {assignment.student_group && (
                                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                        Termiņš: {assignment.due_at_display}
+                                        {assignment.student_group.name}
                                     </span>
                                 )}
                             </div>
 
                             <h2 className="text-2xl font-semibold text-slate-950">
-                                {assignment.scenario.title}
+                                {assignment.scenario?.title ?? 'Uzdevums'}
                             </h2>
 
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                                {assignment.scenario.short_description ?? 'Nav īsā apraksta.'}
+                                {assignment.scenario?.description ??
+                                    'Veic kravas plāna, balasta un stabilitātes pārbaudi atbilstoši piešķirtajam scenārijam.'}
                             </p>
                         </div>
 
-                        {assignment.status === 'assigned' && (
+                        {isAssigned && (
                             <button
                                 type="button"
                                 onClick={startTask}
-                                className="inline-flex h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                disabled={starting}
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                <PlayCircle className="h-4 w-4" />
-                                Sākt risinājumu
+                                <Play className="h-5 w-5" />
+                                {starting ? 'Sāk...' : 'Sākt uzdevumu'}
                             </button>
                         )}
-                    </div>
-                </div>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-4 flex items-center gap-2">
-                                <BookOpen className="h-5 w-5 text-slate-700" />
-                                <h3 className="text-base font-semibold text-slate-950">
-                                    Uzdevuma teksts
-                                </h3>
-                            </div>
-
-                            <p className="whitespace-pre-line text-sm leading-7 text-slate-600">
-                                {assignment.scenario.task_text ?? 'Uzdevuma teksts nav norādīts.'}
-                            </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-4 flex items-center gap-2">
-                                <CheckCircle2 className="h-5 w-5 text-slate-700" />
-                                <h3 className="text-base font-semibold text-slate-950">
-                                    Gala prasības
-                                </h3>
-                            </div>
-
-                            <p className="whitespace-pre-line text-sm leading-7 text-slate-600">
-                                {assignment.scenario.final_requirements ?? 'Gala prasības nav norādītas.'}
-                            </p>
-                        </div>
-
-                        {canShowHints && (
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-                                <div className="mb-4 flex items-center gap-2">
-                                    <ClipboardCheck className="h-5 w-5 text-emerald-700" />
-                                    <h3 className="text-base font-semibold text-emerald-950">
-                                        Hints mācību režīmā
-                                    </h3>
-                                </div>
-
-                                <p className="whitespace-pre-line text-sm leading-7 text-emerald-800">
-                                    {assignment.scenario.student_hints ?? 'Šim uzdevumam nav pievienotu hintu.'}
-                                </p>
-                            </div>
-                        )}
-
-                        {isExam && (
-                            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm leading-7 text-red-800 shadow-sm">
-                                <div className="mb-2 flex items-center gap-2 font-semibold">
-                                    <AlertTriangle className="h-4 w-4" />
-                                    Eksāmena režīms
-                                </div>
-                                Šajā režīmā hinti un detalizēti risinājuma ieteikumi netiek rādīti,
-                                lai objektīvāk pārbaudītu studenta zināšanas.
-                            </div>
-                        )}
-
-                        <form
-                            onSubmit={submitFinal}
-                            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                        >
-                            <div className="mb-4">
-                                <h3 className="text-base font-semibold text-slate-950">
-                                    Gala risinājuma iesniegšana
-                                </h3>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Iesniegšanas brīdī sistēma saglabās pašreizējo stabilitātes aprēķina snapshot.
-                                </p>
-                            </div>
-
-                            <label className="mb-2 block text-sm font-medium text-slate-700">
-                                Studenta komentārs
-                            </label>
-
-                            <textarea
-                                value={comment}
-                                onChange={(event) => setComment(event.target.value)}
-                                rows={4}
-                                disabled={alreadySubmitted}
-                                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10 disabled:bg-slate-50 disabled:text-slate-500"
-                                placeholder="Apraksti, ko mainīji kravas vai balasta plānā un kāpēc risinājums ir drošs."
-                            />
-
-                            {assignment.submission && (
-                                <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                                    Iesniegts: {assignment.submission.submitted_at_display ?? '-'}
-                                </div>
-                            )}
-
+                        {isInProgress && (
                             <button
-                                type="submit"
-                                disabled={processing || alreadySubmitted}
-                                className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                type="button"
+                                onClick={submitTask}
+                                disabled={submitting}
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                <Save className="h-4 w-4" />
-                                {alreadySubmitted
-                                    ? 'Risinājums jau iesniegts'
-                                    : processing
-                                        ? 'Iesniedz...'
-                                        : 'Iesniegt gala risinājumu'}
+                                <ClipboardCheck className="h-5 w-5" />
+                                {submitting ? 'Iesniedz...' : 'Iesniegt darbu'}
                             </button>
-                        </form>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-base font-semibold text-slate-950">
-                                Uzdevuma dati
-                            </h3>
-
-                            <div className="mt-4 space-y-3 text-sm text-slate-600">
-                                <div className="rounded-xl bg-slate-50 p-3">
-                                    <div className="text-xs text-slate-500">Kuģis</div>
-                                    <div className="mt-1 font-medium text-slate-800">
-                                        {assignment.scenario.vessel_name ?? '-'}
-                                    </div>
-                                </div>
-
-                                <div className="rounded-xl bg-slate-50 p-3">
-                                    <div className="text-xs text-slate-500">Kravas plāns</div>
-                                    <div className="mt-1 font-medium text-slate-800">
-                                        {assignment.scenario.cargo_plan_name ?? '-'}
-                                    </div>
-                                </div>
-
-                                <div className="rounded-xl bg-slate-50 p-3">
-                                    <div className="text-xs text-slate-500">Aptuvenais laiks</div>
-                                    <div className="mt-1 font-medium text-slate-800">
-                                        {assignment.scenario.estimated_minutes
-                                            ? `${assignment.scenario.estimated_minutes} min`
-                                            : 'Nav norādīts'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-3">
-                            <ActionLink
-                                href="/cargo-plan"
-                                icon={PackageOpen}
-                                title="Kravas plāns"
-                                description="Pārbaudi un koriģē kravas sadalījumu pa tilpnēm."
-                            />
-
-                            <ActionLink
-                                href="/ballast"
-                                icon={Waves}
-                                title="Balasts"
-                                description="Maini tanku aizpildījumu un pārbaudi bortu līdzsvaru."
-                            />
-
-                            <ActionLink
-                                href="/stability"
-                                icon={Scale}
-                                title="Stabilitāte"
-                                description="Pārbaudi GM, trimu, GZ līkni un kritērijus."
-                            />
-
-                            <ActionLink
-                                href="/reports"
-                                icon={FileText}
-                                title="Atskaites"
-                                description="Ģenerē PDF pārskatu gala iesniegumam."
-                            />
-                        </div>
-
-                        <Link
-                            href="/student/tasks"
-                            className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                            Atpakaļ uz uzdevumiem
-                        </Link>
+                        )}
                     </div>
                 </div>
+
+                {isGraded && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+                        <div className="flex items-start gap-4">
+                            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+                                <CheckCircle2 className="h-6 w-6" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                                    Darbs novērtēts
+                                </p>
+
+                                <h3 className="mt-2 text-2xl font-semibold text-emerald-950">
+                                    {score !== null && score !== undefined
+                                        ? `${formatNumber(score, 1)} / 10`
+                                        : 'Bez skaitliska vērtējuma'}
+                                </h3>
+
+                                {assignment.submission?.teacher_comment ? (
+                                    <div className="mt-4 rounded-2xl bg-white/70 p-4 ring-1 ring-emerald-100">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                                            Pasniedzēja komentārs
+                                        </p>
+                                        <p className="mt-2 text-sm leading-6 text-emerald-950">
+                                            {assignment.submission.teacher_comment}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="mt-3 text-sm text-emerald-800">
+                                        Pasniedzējs nav pievienojis komentāru.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isSubmitted && (
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-800 shadow-sm">
+                        Darbs ir iesniegts un gaida pasniedzēja vērtējumu. Kravas un balasta dati ir slēgti labošanai.
+                    </div>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <Ship className="h-5 w-5 text-slate-500" />
+                        <p className="mt-3 text-sm text-slate-500">Kuģis</p>
+                        <p className="mt-1 font-semibold text-slate-950">{assignment.vessel?.name ?? '-'}</p>
+                        <p className="mt-1 text-xs text-slate-500">IMO {assignment.vessel?.imo_number ?? '-'}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <ClipboardList className="h-5 w-5 text-slate-500" />
+                        <p className="mt-3 text-sm text-slate-500">Termiņš</p>
+                        <p className="mt-1 font-semibold text-slate-950">{assignment.due_at ?? '-'}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <FileText className="h-5 w-5 text-slate-500" />
+                        <p className="mt-3 text-sm text-slate-500">Iesniegts</p>
+                        <p className="mt-1 font-semibold text-slate-950">
+                            {assignment.submission?.submitted_at ?? assignment.submitted_at ?? '-'}
+                        </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <Scale className="h-5 w-5 text-slate-500" />
+                        <p className="mt-3 text-sm text-slate-500">Statuss</p>
+                        <p className="mt-1 font-semibold text-slate-950">{statusLabel(assignment.status)}</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-3">
+                    <Link
+                        href="/cargo-plan"
+                        className={[
+                            'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
+                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                        ].join(' ')}
+                    >
+                        <PackageOpen className="h-6 w-6 text-slate-700" />
+                        <h3 className="mt-4 font-semibold text-slate-950">
+                            Kravas plāns
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                            Pārbaudi kravas izvietojumu pa tilpnēm un kopējo noslodzi.
+                        </p>
+                        {isLocked && (
+                            <p className="mt-3 text-xs font-medium text-slate-500">
+                                Slēgts pēc iesniegšanas.
+                            </p>
+                        )}
+                    </Link>
+
+                    <Link
+                        href="/ballast"
+                        className={[
+                            'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
+                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                        ].join(' ')}
+                    >
+                        <Waves className="h-6 w-6 text-slate-700" />
+                        <h3 className="mt-4 font-semibold text-slate-950">
+                            Balasts
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                            Regulē balasta tankus un pārbaudi brīvās virsmas riskus.
+                        </p>
+                        {isLocked && (
+                            <p className="mt-3 text-xs font-medium text-slate-500">
+                                Slēgts pēc iesniegšanas.
+                            </p>
+                        )}
+                    </Link>
+
+                    <Link
+                        href="/stability"
+                        className={[
+                            'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
+                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                        ].join(' ')}
+                    >
+                        <Scale className="h-6 w-6 text-slate-700" />
+                        <h3 className="mt-4 font-semibold text-slate-950">
+                            Stabilitāte
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                            Apskati GM, trimu, sasvēruma riskus un stabilitātes kritērijus.
+                        </p>
+                    </Link>
+                </div>
+
+                {isAssigned && (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
+                        Lai sāktu darbu ar kravas plānu, balastu un stabilitāti, vispirms nospied pogu “Sākt uzdevumu”.
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );

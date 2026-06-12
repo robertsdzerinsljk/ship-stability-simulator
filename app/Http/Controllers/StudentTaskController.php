@@ -18,47 +18,48 @@ class StudentTaskController extends Controller
 {
     public function index(Request $request): Response
     {
+    $assignments = Assignment::query()
+        ->with([
+            'scenario.vessel',
+            'studentGroup',
+            'submission',
+        ])
+        ->where('user_id', $request->user()->id)
+        ->latest('assigned_at')
+        ->latest('id')
+        ->get();
 
-
-        $assignments = Assignment::query()
-            ->with([
-                'scenario.vessel',
-                'scenario.cargoPlan',
-                'submission',
-            ])
-            ->where('user_id', $request->user()->id)
-            ->latest('assigned_at')
-            ->get()
-            ->map(fn (Assignment $assignment) => $this->mapAssignment($assignment));
-
-        return Inertia::render('StudentTasks/Index', [
-            'assignments' => $assignments,
-        ]);
-    }
+    return Inertia::render('StudentTasks/Index', [
+        'stats' => [
+            'total' => $assignments->count(),
+            'assigned' => $assignments->where('status', 'assigned')->count(),
+            'in_progress' => $assignments->where('status', 'in_progress')->count(),
+            'submitted' => $assignments->where('status', 'submitted')->count(),
+            'graded' => $assignments->where('status', 'graded')->count(),
+        ],
+        'assignments' => $assignments
+            ->map(fn (Assignment $assignment) => $this->mapStudentAssignment($assignment))
+            ->values(),
+    ]);
+}
 
     public function show(Request $request, Assignment $assignment): Response
-    {
-        abort_unless($assignment->user_id === $request->user()->id, 403);
+{
+    abort_unless(
+        $assignment->user_id === $request->user()->id || $request->user()->hasRole('admin'),
+        403,
+    );
 
-        $assignment->load([
-            'scenario.vessel',
-            'scenario.cargoPlan',
-            'submission',
-            'solution',
-        ]);
+    $assignment->load([
+        'scenario.vessel',
+        'studentGroup',
+        'submission',
+    ]);
 
-        if ($assignment->scenario?->vessel) {
-            ActiveVessel::set($request, $assignment->scenario->vessel);
-        }
-
-        if ($assignment->solution) {
-            ActiveAssignmentSolution::set($request, $assignment);
-        }
-
-        return Inertia::render('StudentTasks/Show', [
-            'assignment' => $this->mapAssignment($assignment, includeDetails: true),
-        ]);
-    }
+    return Inertia::render('StudentTasks/Show', [
+        'assignment' => $this->mapStudentAssignment($assignment),
+    ]);
+}
 
     public function start(
         Request $request,
@@ -226,5 +227,54 @@ public function submit(
         }
 
         return $data;
+    }
+    private function mapStudentAssignment(Assignment $assignment): array
+{
+    $submission = $assignment->submission;
+
+    return [
+        'id' => $assignment->id,
+        'status' => $assignment->status,
+        'assigned_at' => $assignment->assigned_at?->format('d.m.Y H:i'),
+        'started_at' => $assignment->started_at?->format('d.m.Y H:i'),
+        'submitted_at' => $assignment->submitted_at?->format('d.m.Y H:i'),
+        'due_at' => $assignment->due_at?->format('d.m.Y H:i'),
+
+        'is_assigned' => $assignment->status === 'assigned',
+        'is_in_progress' => $assignment->status === 'in_progress',
+        'is_submitted' => in_array($assignment->status, ['submitted', 'graded'], true),
+        'is_graded' => $assignment->status === 'graded',
+
+        'student_group' => $assignment->studentGroup ? [
+            'id' => $assignment->studentGroup->id,
+            'name' => $assignment->studentGroup->name,
+            'code' => $assignment->studentGroup->code,
+            'academic_year' => $assignment->studentGroup->academic_year,
+        ] : null,
+
+        'scenario' => [
+            'id' => $assignment->scenario?->id,
+            'title' => $assignment->scenario?->title ?? '-',
+            'description' => $assignment->scenario?->description ?? null,
+            'difficulty' => $assignment->scenario?->difficulty ?? '-',
+            'mode' => $assignment->scenario?->mode ?? '-',
+        ],
+
+        'vessel' => [
+            'id' => $assignment->scenario?->vessel?->id,
+            'name' => $assignment->scenario?->vessel?->name ?? '-',
+            'type' => $assignment->scenario?->vessel?->type ?? '-',
+            'imo_number' => $assignment->scenario?->vessel?->imo_number ?? '-',
+        ],
+
+        'submission' => $submission ? [
+            'id' => $submission->id,
+            'status' => $submission->status,
+            'submitted_at' => $submission->created_at?->format('d.m.Y H:i'),
+            'score' => $submission->score !== null ? (float) $submission->score : null,
+            'teacher_comment' => $submission->teacher_comment,
+            'has_feedback' => $submission->score !== null || filled($submission->teacher_comment),
+        ] : null,
+    ];
     }
 }

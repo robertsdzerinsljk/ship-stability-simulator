@@ -1101,28 +1101,35 @@ function TeacherDashboardView({
                 />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <QuickLink
-                    href="/scenarios"
-                    icon={ClipboardList}
-                    title="Scenāriji"
-                    description={`${formatNumber(stats.scenarios_published, 0)} publicēti no ${formatNumber(stats.scenarios_total, 0)} scenārijiem.`}
-                />
+           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <QuickLink
+        href="/teacher/assignments"
+        icon={ClipboardCheck}
+        title="Uzdevumu piešķiršana"
+        description="Piešķir publicētus scenārijus studentam vai visai grupai."
+    />
 
-                <QuickLink
-                    href="/teacher/submissions"
-                    icon={GraduationCap}
-                    title="Vērtēšana"
-                    description="Atver studentu iesniegumus un vērtē snapshot rezultātus."
-                />
+    <QuickLink
+        href="/teacher/students"
+        icon={Users}
+        title="Studenti un grupas"
+        description="Apskati studentus, klases un grupu piesaisti."
+    />
 
-                <QuickLink
-                    href="/teacher/analytics"
-                    icon={BarChart3}
-                    title="Analītika"
-                    description="Skati rezultātu sadalījumu, kļūdas un scenāriju statistiku."
-                />
-            </div>
+    <QuickLink
+        href="/teacher/submissions"
+        icon={GraduationCap}
+        title="Vērtēšana"
+        description="Atver studentu iesniegumus un vērtē snapshot rezultātus."
+    />
+
+    <QuickLink
+        href="/scenarios"
+        icon={ClipboardList}
+        title="Scenāriji"
+        description={`${formatNumber(stats.scenarios_published, 0)} publicēti no ${formatNumber(stats.scenarios_total, 0)} scenārijiem.`}
+    />
+</div>
 
             <RecentSubmissionsTable submissions={recentSubmissions} />
         </div>
@@ -1205,28 +1212,35 @@ function AdminDashboardView({
                 />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <QuickLink
-                    href="/vessels"
-                    icon={Ship}
-                    title="Kuģi"
-                    description="Pārslēdz aktīvo kuģi un apskati kuģu datubāzi."
-                />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <QuickLink
+        href="/teacher/assignments"
+        icon={ClipboardCheck}
+        title="Piešķīrumi"
+        description="Pārskati scenāriju piešķiršanu studentiem un grupām."
+    />
 
-                <QuickLink
-                    href="/scenarios"
-                    icon={ClipboardList}
-                    title="Scenāriji"
-                    description="Pārvaldi mācību un eksāmena scenārijus."
-                />
+    <QuickLink
+        href="/teacher/students"
+        icon={Users}
+        title="Studenti un grupas"
+        description="Pārskati studentu sarakstu un grupu struktūru."
+    />
 
-                <QuickLink
-                    href="/teacher/analytics"
-                    icon={BarChart3}
-                    title="Analītika"
-                    description="Skati kopējo sistēmas rezultātu analīzi."
-                />
-            </div>
+    <QuickLink
+        href="/vessels"
+        icon={Ship}
+        title="Kuģi"
+        description="Pārslēdz aktīvo kuģi un apskati kuģu datubāzi."
+    />
+
+    <QuickLink
+        href="/teacher/analytics"
+        icon={BarChart3}
+        title="Analītika"
+        description="Skati kopējo sistēmas rezultātu analīzi."
+    />
+</div>
 
             <RecentSubmissionsTable submissions={recentSubmissions} />
         </div>

@@ -87,6 +87,12 @@ const navigation: NavItem[] = [
         roles: ['teacher', 'admin'],
     },
     {
+        label: 'Uzdevumu piešķiršana',
+        href: '/teacher/assignments',
+        icon: ClipboardCheck,
+        roles: ['teacher', 'admin'],
+    },
+    {
         label: 'Iesniegumi',
         href: '/teacher/submissions',
         icon: GraduationCap,

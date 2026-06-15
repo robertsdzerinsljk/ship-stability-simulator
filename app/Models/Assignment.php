@@ -18,6 +18,8 @@ class Assignment extends Model
         'submitted_at',
         'due_at',
         'student_group_id',
+        'due_soon_notified_at',
+        'overdue_notified_at',
     ];
 
     protected function casts(): array
@@ -27,6 +29,8 @@ class Assignment extends Model
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
             'due_at' => 'datetime',
+            'due_soon_notified_at' => 'datetime',
+            'overdue_notified_at' => 'datetime',
         ];
     }
 

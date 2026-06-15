@@ -6,6 +6,7 @@ use App\Models\Assignment;
 use App\Models\Scenario;
 use App\Models\StudentGroup;
 use App\Models\User;
+use App\Notifications\AssignmentAssignedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -89,8 +90,10 @@ class TeacherAssignmentController extends Controller
                 'in_progress' => $assignments->where('status', 'in_progress')->count(),
                 'submitted' => $assignments->where('status', 'submitted')->count(),
                 'graded' => $assignments->where('status', 'graded')->count(),
+                'overdue' => $assignments->where('status', 'overdue')->count(),
                 'students' => $students->count(),
                 'groups' => $groups->count(),
+                
             ],
             'assignments' => $assignments
                 ->map(fn (Assignment $assignment) => $this->mapAssignment($assignment))
@@ -135,7 +138,7 @@ class TeacherAssignmentController extends Controller
         }
 
         $group = StudentGroup::query()
-            ->with(['students' => fn ($query) => $query->role('student')])
+            ->with(['students' => fn ($query) => $query->role('student')->orderBy('name')])
             ->where('status', 'active')
             ->findOrFail($validated['student_group_id']);
 
@@ -165,27 +168,35 @@ class TeacherAssignmentController extends Controller
         ?StudentGroup $group,
     ): int {
         $createdCount = 0;
+        $teacher = $request->user();
 
         foreach ($students as $student) {
-            $assignment = Assignment::query()
-                ->firstOrNew([
-                    'scenario_id' => $scenario->id,
-                    'user_id' => $student->id,
-                ]);
+            $assignment = Assignment::firstOrNew([
+                'scenario_id' => $scenario->id,
+                'user_id' => $student->id,
+            ]);
 
-            if (! $assignment->exists) {
-                $assignment->status = 'assigned';
-                $assignment->assigned_at = now();
-                $createdCount++;
-            }
+            $isNewAssignment = ! $assignment->exists;
 
             $assignment->fill([
-                'assigned_by_user_id' => $request->user()->id,
+                'assigned_by_user_id' => $teacher->id,
                 'student_group_id' => $group?->id,
+                'status' => $assignment->exists ? $assignment->status : 'assigned',
+                'assigned_at' => $assignment->exists ? $assignment->assigned_at : now(),
                 'due_at' => $dueAt,
             ]);
 
             $assignment->save();
+
+            if ($isNewAssignment) {
+                $createdCount++;
+
+                $assignment->loadMissing('scenario');
+
+                $student->notify(
+                    new AssignmentAssignedNotification($assignment)
+                );
+            }
         }
 
         return $createdCount;

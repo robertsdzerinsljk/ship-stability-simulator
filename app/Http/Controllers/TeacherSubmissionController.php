@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Notifications\AssignmentGradedNotification;
 
 class TeacherSubmissionController extends Controller
 {
@@ -108,6 +109,21 @@ class TeacherSubmissionController extends Controller
             'score' => $validated['score'],
             'teacher_comment' => $validated['teacher_comment'] ?? null,
         ]);
+
+        $submission->loadMissing([
+        'student',
+        'assignment.scenario',
+        ]);
+
+        if ($submission->student) {
+            $submission->student->notify(
+                new AssignmentGradedNotification(
+                    assignment: $submission->assignment,
+                    submission: $submission,
+                    teacher: $request->user(),
+                ),
+            );
+        }
 
         $submission->assignment?->update([
             'status' => 'graded',

@@ -26,6 +26,7 @@ type Assignment = {
     is_in_progress?: boolean;
     is_submitted?: boolean;
     is_graded?: boolean;
+    is_overdue?: boolean;
     student_group?: {
         id?: number | null;
         name?: string | null;
@@ -96,6 +97,10 @@ function statusLabel(status?: string | null) {
         return 'Novērtēts';
     }
 
+    if (status === 'overdue') {
+        return 'Termiņš beidzies';
+    }
+
     return status ?? 'Nav statusa';
 }
 
@@ -110,6 +115,10 @@ function statusBadge(status?: string | null) {
 
     if (status === 'in_progress') {
         return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    if (status === 'overdue') {
+        return 'bg-red-50 text-red-700 ring-red-100';
     }
 
     return 'bg-slate-50 text-slate-700 ring-slate-100';
@@ -144,10 +153,15 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
     const isInProgress = assignment.status === 'in_progress';
     const isSubmitted = assignment.status === 'submitted';
     const isGraded = assignment.status === 'graded';
-    const isLocked = isSubmitted || isGraded;
+    const isOverdue = assignment.status === 'overdue';
+    const isLocked = isSubmitted || isGraded || isOverdue;
     const score = assignment.submission?.score;
 
     const startTask = () => {
+        if (isLocked) {
+            return;
+        }
+
         setStarting(true);
 
         router.post(
@@ -161,6 +175,10 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
     };
 
     const submitTask = () => {
+        if (isLocked) {
+            return;
+        }
+
         if (!confirm('Vai tiešām iesniegt darbu? Pēc iesniegšanas kravu un balastu vairs nevarēs labot.')) {
             return;
         }
@@ -308,6 +326,11 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                         Darbs ir iesniegts un gaida pasniedzēja vērtējumu. Kravas un balasta dati ir slēgti labošanai.
                     </div>
                 )}
+                {isOverdue && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 shadow-sm">
+                        Uzdevuma iesniegšanas termiņš ir beidzies. Darbu vairs nevar iesniegt bez pasniedzēja atļaujas.
+                    </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -343,7 +366,7 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                         href="/cargo-plan"
                         className={[
                             'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
-                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                            isAssigned || isLocked ? 'pointer-events-none opacity-50' : '',
                         ].join(' ')}
                     >
                         <PackageOpen className="h-6 w-6 text-slate-700" />
@@ -364,7 +387,7 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                         href="/ballast"
                         className={[
                             'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
-                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                            isAssigned || isLocked ? 'pointer-events-none opacity-50' : '',
                         ].join(' ')}
                     >
                         <Waves className="h-6 w-6 text-slate-700" />
@@ -385,7 +408,7 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                         href="/stability"
                         className={[
                             'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
-                            isAssigned ? 'pointer-events-none opacity-50' : '',
+                            isAssigned || isLocked ? 'pointer-events-none opacity-50' : '',
                         ].join(' ')}
                     >
                         <Scale className="h-6 w-6 text-slate-700" />
@@ -395,6 +418,11 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                             Apskati GM, trimu, sasvēruma riskus un stabilitātes kritērijus.
                         </p>
+                        {isLocked && (
+                            <p className="mt-3 text-xs font-medium text-slate-500">
+                                Slēgts pēc iesniegšanas.
+                            </p>
+                        )}
                     </Link>
                 </div>
 

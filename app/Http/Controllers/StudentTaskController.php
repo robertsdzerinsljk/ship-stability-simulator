@@ -39,6 +39,7 @@ class StudentTaskController extends Controller
             'in_progress' => $assignments->where('status', 'in_progress')->count(),
             'submitted' => $assignments->where('status', 'submitted')->count(),
             'graded' => $assignments->where('status', 'graded')->count(),
+            'overdue' => $assignments->where('status', 'overdue')->count(),
         ],
         'assignments' => $assignments
             ->map(fn (Assignment $assignment) => $this->mapStudentAssignment($assignment))
@@ -267,6 +268,7 @@ public function submit(
         'is_in_progress' => $assignment->status === 'in_progress',
         'is_submitted' => in_array($assignment->status, ['submitted', 'graded'], true),
         'is_graded' => $assignment->status === 'graded',
+        'is_overdue' => $assignment->status === 'overdue',
 
         'student_group' => $assignment->studentGroup ? [
             'id' => $assignment->studentGroup->id,

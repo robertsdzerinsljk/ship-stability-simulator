@@ -23,6 +23,7 @@ type Stats = {
     in_progress?: number | string | null;
     submitted?: number | string | null;
     graded?: number | string | null;
+    overdue?: number | string | null;
     students?: number | string | null;
     groups?: number | string | null;
 };
@@ -141,6 +142,10 @@ function statusLabel(status?: string | null) {
         return 'Novērtēts';
     }
 
+    if (status === 'overdue') {
+        return 'Termiņš beidzies';
+    }
+
     return status ?? 'Nav statusa';
 }
 
@@ -155,6 +160,10 @@ function statusBadge(status?: string | null) {
 
     if (status === 'in_progress') {
         return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    if (status === 'overdue') {
+        return 'bg-red-50 text-red-700 ring-red-100';
     }
 
     return 'bg-slate-50 text-slate-700 ring-slate-100';
@@ -643,6 +652,7 @@ export default function TeacherAssignmentsIndex({
         in_progress: 0,
         submitted: 0,
         graded: 0,
+        overdue: 0,
         students: 0,
         groups: 0,
         ...stats,
@@ -697,7 +707,7 @@ export default function TeacherAssignmentsIndex({
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     <StatCard
                         title="Piešķīrumi"
                         value={formatNumber(statsData.total)}
@@ -724,6 +734,13 @@ export default function TeacherAssignmentsIndex({
                         value={formatNumber(statsData.graded)}
                         description="Darbi ar vērtējumu"
                         icon={CheckCircle2}
+                    />
+
+                    <StatCard
+                        title="Nokavēti"
+                        value={formatNumber(statsData.overdue)}
+                        description="Uzdevumi ar beigušos termiņu"
+                        icon={AlertTriangle}
                     />
                 </div>
 

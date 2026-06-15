@@ -17,6 +17,7 @@ type Stats = {
     in_progress?: number | string | null;
     submitted?: number | string | null;
     graded?: number | string | null;
+    overdue?: number | string | null;
 };
 
 type Assignment = {
@@ -30,6 +31,7 @@ type Assignment = {
     is_in_progress?: boolean;
     is_submitted?: boolean;
     is_graded?: boolean;
+    is_overdue?: boolean;
     student_group?: {
         id?: number | null;
         name?: string | null;
@@ -94,6 +96,10 @@ function statusLabel(status?: string | null) {
         return 'Novērtēts';
     }
 
+    if (status === 'overdue') {
+        return 'Termiņš beidzies';
+    }
+
     return status ?? 'Nav statusa';
 }
 
@@ -108,6 +114,10 @@ function statusBadge(status?: string | null) {
 
     if (status === 'in_progress') {
         return 'bg-amber-50 text-amber-700 ring-amber-100';
+    }
+
+    if (status === 'overdue') {
+        return 'bg-red-50 text-red-700 ring-red-100';
     }
 
     return 'bg-slate-50 text-slate-700 ring-slate-100';
@@ -165,6 +175,7 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
     const isGraded = assignment.status === 'graded';
     const isSubmitted = assignment.status === 'submitted';
     const isInProgress = assignment.status === 'in_progress';
+    const isOverdue = assignment.status === 'overdue';
     const score = assignment.submission?.score;
 
     return (
@@ -244,6 +255,12 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
                             Darbs ir sākts. Turpini kravas, balasta un stabilitātes pārbaudi.
                         </div>
                     )}
+
+                    {isOverdue && (
+                        <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
+                            Uzdevuma termiņš ir beidzies. Sazinies ar pasniedzēju, ja nepieciešama atkārtota piekļuve.
+                        </div>
+                    )}
                 </div>
 
                 <Link
@@ -266,6 +283,7 @@ export default function StudentTasksIndex({ stats, assignments }: StudentTasksIn
         in_progress: 0,
         submitted: 0,
         graded: 0,
+        overdue: 0,
         ...stats,
     };
 
@@ -300,7 +318,7 @@ export default function StudentTasksIndex({ stats, assignments }: StudentTasksIn
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     <StatCard
                         title="Kopā"
                         value={formatNumber(statsData.total)}
@@ -327,6 +345,13 @@ export default function StudentTasksIndex({ stats, assignments }: StudentTasksIn
                         value={formatNumber(statsData.graded)}
                         description="Darbi ar vērtējumu un komentāru"
                         icon={CheckCircle2}
+                    />
+
+                    <StatCard
+                        title="Nokavēti"
+                        value={formatNumber(statsData.overdue)}
+                        description="Uzdevumi ar beigušos termiņu"
+                        icon={AlertTriangle}
                     />
                 </div>
 

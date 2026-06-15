@@ -249,6 +249,10 @@ function statusBadge(status?: string | null) {
         return 'bg-amber-50 text-amber-700 ring-amber-100';
     }
 
+    if (status === 'overdue') {
+    return 'bg-red-50 text-red-700 ring-red-100';
+    }
+
     return 'bg-slate-50 text-slate-700 ring-slate-100';
 }
 

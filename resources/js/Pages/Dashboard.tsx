@@ -342,10 +342,10 @@ function QuickLink({
     return (
         <Link
             href={href}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:bg-[#E7EFED] hover:border-slate-300 hover:shadow-md"
         >
             <div className="flex items-start gap-4">
-                <div className="rounded-xl bg-slate-950 p-3 text-white">
+                <div className="rounded-xl bg-[#155f4c] p-3 text-white">
                     <Icon className="h-5 w-5" />
                 </div>
 

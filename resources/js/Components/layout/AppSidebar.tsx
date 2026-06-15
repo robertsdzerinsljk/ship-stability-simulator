@@ -176,9 +176,9 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
                             onClick={onClose}
                             className={[
                                 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                                active
-                                    ? 'bg-slate-900 text-white shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                               active
+    ? 'bg-[#155f4c] text-white shadow-sm'
+    : 'text-slate-600 hover:bg-[#155f4c]/10 hover:text-[#155f4c]'
                             ].join(' ')}
                         >
                             <Icon className="h-5 w-5" />

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage, } from '@inertiajs/react';
 import { type PageProps } from '@/types';
 import {
     AlertTriangle,
@@ -12,7 +12,7 @@ import {
     Plus,
     Ship,
 } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState, useEffect, } from 'react';
 
 type Scenario = {
     id: number;
@@ -156,6 +156,20 @@ function ScenarioForm({
     const filteredCargoPlans = useMemo(() => {
         return cargoPlans.filter((plan) => String(plan.vessel_id) === String(vesselId));
     }, [cargoPlans, vesselId]);
+    useEffect(() => {
+    if (filteredCargoPlans.length === 0) {
+        setCargoPlanId('');
+        return;
+    }
+
+    const currentPlanStillExists = filteredCargoPlans.some(
+        (plan) => String(plan.id) === String(cargoPlanId),
+    );
+
+    if (!currentPlanStillExists) {
+        setCargoPlanId(String(filteredCargoPlans[0].id));
+    }
+}, [filteredCargoPlans, cargoPlanId]);
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -254,21 +268,27 @@ function ScenarioForm({
                     </div>
 
                     <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">
-                            Aktīvais kravas plāns
-                        </label>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Sākuma kravas plāns
+                    </label>
                         <select
                             value={cargoPlanId}
+                            required
                             onChange={(event) => setCargoPlanId(event.target.value)}
                             className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
                         >
-                            <option value="">Bez piesaistīta kravas plāna</option>
+                            <option value="">Izvēlies kravas plānu</option>
                             {filteredCargoPlans.map((plan) => (
                                 <option key={plan.id} value={plan.id}>
                                     {plan.name}
                                 </option>
                             ))}
                         </select>
+                        {filteredCargoPlans.length === 0 && (
+                            <p className="mt-2 text-xs text-red-600">
+                                Šim kuģim nav pieejams aktīvs sākuma kravas plāns. Vispirms jāsakārto cargo_plans dati.
+                            </p>
+                        )}
                     </div>
 
                     <div>
@@ -403,7 +423,7 @@ function ScenarioForm({
 
                 <button
                     type="submit"
-                    disabled={processing}
+                    disabled={processing || !cargoPlanId || filteredCargoPlans.length === 0}
                     className="inline-flex h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     <Plus className="h-4 w-4" />
@@ -662,14 +682,6 @@ export default function ScenariosIndex({
 
                 <ScenarioList scenarios={scenarios} />
 
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-800">
-                    <div className="mb-2 flex items-center gap-2 font-semibold">
-                        <AlertTriangle className="h-4 w-4" />
-                        Nākamais uzlabojums
-                    </div>
-                    Šobrīd scenārijs tiek izveidots un publicēts, bet vēl nav studentu piešķiršanas.
-                    Nākamajā solī pievienosim <strong>uzdevumu piešķiršanu studentiem/grupām</strong> un studenta darba plūsmu.
-                </div>
             </div>
         </AuthenticatedLayout>
     );

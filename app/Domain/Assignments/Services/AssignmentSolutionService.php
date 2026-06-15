@@ -35,7 +35,20 @@ class AssignmentSolutionService
         return DB::transaction(function () use ($assignment) {
             $scenario = $assignment->scenario;
             $vessel = $scenario->vessel;
-            $sourceCargoPlan = $scenario->cargoPlan;
+
+            $sourceCargoPlan = $scenario->cargoPlan
+                ?? CargoPlan::query()
+                    ->with(['items.cargoType', 'items.compartment'])
+                    ->where('vessel_id', $vessel->id)
+                    ->where('status', 'active')
+                    ->latest('id')
+                    ->first();
+
+            if (! $sourceCargoPlan) {
+                throw new \RuntimeException('Assignment cannot be started because scenario has no cargo plan and vessel has no active cargo plan.');
+            }
+
+            $sourceCargoPlan->loadMissing(['items.cargoType', 'items.compartment']);
 
             $solution = AssignmentSolution::create([
                 'assignment_id' => $assignment->id,

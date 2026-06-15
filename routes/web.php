@@ -14,6 +14,7 @@ use App\Http\Controllers\TeacherAssignmentController;
 use App\Http\Controllers\VesselController;
 use App\Http\Controllers\TeacherStudentController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\NotificationController;
 
 use Inertia\Inertia;
 

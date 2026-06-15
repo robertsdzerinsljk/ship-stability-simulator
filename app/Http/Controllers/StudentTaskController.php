@@ -13,6 +13,9 @@ use Inertia\Response;
 use App\Support\ActiveVessel;
 use App\Domain\Assignments\Services\AssignmentSolutionService;
 use App\Support\ActiveAssignmentSolution;
+use App\Models\User;
+use App\Notifications\AssignmentSubmittedNotification;
+use Illuminate\Support\Facades\Notification;
 
 class StudentTaskController extends Controller
 {
@@ -126,7 +129,7 @@ public function submit(
         $solution->ballastTanks,
     );
 
-    Submission::updateOrCreate(
+    $submission = Submission::updateOrCreate(
         [
             'assignment_id' => $assignment->id,
         ],
@@ -150,6 +153,26 @@ public function submit(
         'status' => 'submitted',
         'submitted_at' => now(),
     ]);
+    $assignment->loadMissing(['scenario', 'assignedBy']);
+
+    $recipients = collect();
+
+    if ($assignment->assignedBy) {
+        $recipients->push($assignment->assignedBy);
+    }
+
+    if ($recipients->isEmpty()) {
+        $recipients = User::role(['teacher', 'admin'])->get();
+    }
+
+    Notification::send(
+        $recipients->unique('id')->values(),
+        new AssignmentSubmittedNotification(
+            assignment: $assignment,
+            submission: $submission,
+            student: $request->user(),
+        ),
+    );
 
     return redirect()
         ->route('student.tasks.show', $assignment)

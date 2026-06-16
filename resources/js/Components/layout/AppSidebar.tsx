@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { type PageProps } from '@/types';
 import {
     Activity,
@@ -163,6 +163,14 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
         [userRoles.join('|')],
     );
 
+    const logout = () => {
+        router.post(route('logout'), {}, {
+            onSuccess: () => {
+                window.location.assign(route('login'));
+            },
+        });
+    };
+
     const renderLogo = (collapsed: boolean) => (
         <Link
             href="/dashboard"
@@ -251,10 +259,9 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
                 </nav>
 
                 <div className="border-t border-slate-200 p-3">
-                    <Link
-                        href="/logout"
-                        method="post"
-                        as="button"
+                    <button
+                        type="button"
+                        onClick={logout}
                         title={collapsed ? 'Izrakstīties' : undefined}
                         className={[
                             'flex w-full items-center rounded-xl py-2.5 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-700',
@@ -272,7 +279,7 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
                         >
                             Izrakstīties
                         </span>
-                    </Link>
+                    </button>
                 </div>
             </>
         );

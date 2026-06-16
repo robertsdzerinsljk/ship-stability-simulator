@@ -33,7 +33,8 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:120',
+            'last_name' => 'required|string|max:120',
             'email' => [
                 'required',
                 'string',
@@ -51,9 +52,10 @@ class RegisteredUserController extends Controller
         ]);
 
         $role = InstitutionalEmail::roleFor($request->email);
+        $name = trim($request->string('first_name').' '.$request->string('last_name'));
 
         $user = User::create([
-            'name' => $request->name,
+            'name' => $name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'auth_provider' => 'local',
@@ -65,6 +67,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return to_route('dashboard');
     }
 }

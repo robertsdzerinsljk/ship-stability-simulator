@@ -62,6 +62,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         event.preventDefault();
 
         post('/login', {
+            onSuccess: () => {
+                window.location.assign(route('dashboard'));
+            },
             onFinish: () => reset('password'),
         });
     };

@@ -366,12 +366,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                                 <div className="mt-7 border-t border-slate-100 pt-5 text-center text-sm text-slate-500">
                                     Nav konta?{' '}
-                                    <Link
+                                    <a
                                         href={route('register')}
                                         className="font-semibold text-emerald-800 hover:underline"
                                     >
                                         Reģistrēties ar LJK e-pastu
-                                    </Link>
+                                    </a>
                                 </div>
                             </div>
 

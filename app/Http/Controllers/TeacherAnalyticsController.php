@@ -2,28 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Assignments\Services\AssignmentDeadlineService;
 use App\Models\Assignment;
 use App\Models\Scenario;
 use App\Models\Submission;
 use Illuminate\Support\Collection;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TeacherAnalyticsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request, AssignmentDeadlineService $deadlineService): Response
     {
+        $deadlineService->syncOverdueAssignments();
+        $teacher = $request->user();
+
         $assignments = Assignment::query()
             ->with(['scenario.vessel', 'student'])
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->where('assigned_by_user_id', $teacher->id),
+            )
             ->get();
 
         $submissions = Submission::query()
             ->with(['student', 'scenario.vessel', 'assignment'])
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->whereHas(
+                    'assignment',
+                    fn ($assignmentQuery) => $assignmentQuery->where('assigned_by_user_id', $teacher->id),
+                ),
+            )
             ->latest('submitted_at')
             ->get();
 
         $scenarios = Scenario::query()
             ->with(['vessel', 'assignments', 'submissions'])
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->where('created_by_user_id', $teacher->id),
+            )
             ->latest()
             ->get();
 
@@ -57,6 +77,7 @@ class TeacherAnalyticsController extends Controller
             'in_progress' => 'Procesā',
             'submitted' => 'Iesniegti',
             'graded' => 'Novērtēti',
+            'overdue' => 'Nokavēti',
         ];
 
         return collect($statuses)

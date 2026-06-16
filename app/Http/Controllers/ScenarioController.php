@@ -12,10 +12,16 @@ use Inertia\Response;
 
 class ScenarioController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $teacher = $request->user();
+
         $scenarios = Scenario::query()
             ->with(['vessel', 'cargoPlan', 'creator'])
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->where('created_by_user_id', $teacher->id),
+            )
             ->latest()
             ->get()
             ->map(fn (Scenario $scenario) => [
@@ -98,6 +104,12 @@ class ScenarioController extends Controller
 
     public function updateStatus(Request $request, Scenario $scenario): RedirectResponse
     {
+        abort_unless(
+            $request->user()->hasRole('admin')
+                || $scenario->created_by_user_id === $request->user()->id,
+            403,
+        );
+
         $validated = $request->validate([
             'status' => ['required', 'in:draft,published,archived'],
         ]);

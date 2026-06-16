@@ -39,6 +39,11 @@ type Assignment = {
         description?: string | null;
         difficulty?: string | null;
         mode?: string | null;
+        task_text?: string | null;
+        final_requirements?: string | null;
+        student_hints?: string | null;
+        show_hints?: boolean;
+        allow_solution_comparison?: boolean;
     };
     vessel?: {
         id?: number | null;
@@ -53,6 +58,10 @@ type Assignment = {
         score?: number | string | null;
         teacher_comment?: string | null;
         has_feedback?: boolean;
+    } | null;
+    solution_comparison?: {
+        recommended_metrics?: Record<string, number | string | null>;
+        student_metrics?: Record<string, number | string | null>;
     } | null;
 };
 
@@ -156,6 +165,16 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
     const isOverdue = assignment.status === 'overdue';
     const isLocked = isSubmitted || isGraded || isOverdue;
     const score = assignment.submission?.score;
+    const comparison = assignment.solution_comparison;
+    const comparisonRows = [
+        ['displacement', 'Displacement', 't', 2],
+        ['gm', 'GM', 'm', 3],
+        ['trim', 'Trim', 'm', 3],
+        ['heel', 'Heel', '°', 3],
+        ['fore_draft', 'Priekšgala iegrime', 'm', 2],
+        ['aft_draft', 'Pakaļgala iegrime', 'm', 2],
+        ['max_gz', 'Max GZ', 'm', 3],
+    ] as const;
 
     const startTask = () => {
         if (isLocked) {
@@ -284,6 +303,39 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                     </div>
                 </div>
 
+                {(assignment.scenario?.task_text || assignment.scenario?.final_requirements || assignment.scenario?.student_hints) && (
+                    <div className="grid gap-4 lg:grid-cols-3">
+                        {assignment.scenario?.task_text && (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+                                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                    Uzdevuma teksts
+                                </p>
+                                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+                                    {assignment.scenario.task_text}
+                                </p>
+                            </div>
+                        )}
+
+                        {assignment.scenario?.final_requirements && (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                    Gala prasības
+                                </p>
+                                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+                                    {assignment.scenario.final_requirements}
+                                </p>
+                            </div>
+                        )}
+
+                        {assignment.scenario?.student_hints && (
+                            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm leading-6 text-blue-800 shadow-sm lg:col-span-3">
+                                <p className="font-semibold">Mācību režīma hints</p>
+                                <p className="mt-2 whitespace-pre-line">{assignment.scenario.student_hints}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {isGraded && (
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
                         <div className="flex items-start gap-4">
@@ -329,6 +381,47 @@ export default function StudentTasksShow({ assignment }: StudentTasksShowProps) 
                 {isOverdue && (
                     <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 shadow-sm">
                         Uzdevuma iesniegšanas termiņš ir beidzies. Darbu vairs nevar iesniegt bez pasniedzēja atļaujas.
+                    </div>
+                )}
+
+                {comparison && (
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="border-b border-slate-200 px-5 py-4">
+                            <h3 className="text-base font-semibold text-slate-950">
+                                Risinājuma salīdzinājums
+                            </h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Salīdzinājums ar pasniedzēja scenārija sākuma/ieteicamo modeli.
+                            </p>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[760px] text-left">
+                                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th className="px-4 py-3 font-semibold">Metrika</th>
+                                        <th className="px-4 py-3 font-semibold">Tavs risinājums</th>
+                                        <th className="px-4 py-3 font-semibold">Ieteicamais modelis</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {comparisonRows.map(([key, label, unit, digits]) => (
+                                        <tr key={key} className="border-b border-slate-100 last:border-0">
+                                            <td className="px-4 py-4 text-sm font-semibold text-slate-950">
+                                                {label}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-slate-700">
+                                                {formatNumber(comparison.student_metrics?.[key], digits)} {unit}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-slate-700">
+                                                {formatNumber(comparison.recommended_metrics?.[key], digits)} {unit}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 

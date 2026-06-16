@@ -94,7 +94,8 @@ class CargoPlanController extends Controller
                 'solution_id' => $solution->id,
                 'mode' => 'student_solution',
                 'status' => $solution->status,
-                'is_locked' => $solution->status !== 'in_progress',
+                'is_locked' => $solution->status !== 'in_progress'
+                    || in_array($solution->assignment?->status, ['submitted', 'graded', 'overdue'], true),
             ] : null,
         ]);
     }
@@ -106,7 +107,10 @@ class CargoPlanController extends Controller
         if ($solution) {
             abort_unless($cargoPlanItem->cargo_plan_id === $solution->solution_cargo_plan_id, 403);
 
-            if ($solution->status !== 'in_progress') {
+            if (
+                $solution->status !== 'in_progress'
+                || in_array($solution->assignment?->status, ['submitted', 'graded', 'overdue'], true)
+            ) {
                 return back()->with('error', 'Risinājums jau ir iesniegts. Kravas plānu vairs nevar mainīt.');
             }
         }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureStudentOnboardingIsComplete;
 use App\Http\Middleware\EnsureUserHasAnyRole;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role.any' => EnsureUserHasAnyRole::class,
+            'student.onboarded' => EnsureStudentOnboardingIsComplete::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

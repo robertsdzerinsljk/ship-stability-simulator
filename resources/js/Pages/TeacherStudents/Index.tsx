@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import {
     GraduationCap,
@@ -305,9 +305,12 @@ function StudentsTable({
                                 className="border-b border-slate-100 last:border-0"
                             >
                                 <td className="px-4 py-4">
-                                    <div className="font-semibold text-slate-950">
+                                    <Link
+                                        href={`/teacher/students/${student.id}`}
+                                        className="font-semibold text-slate-950 hover:text-[#155f4c] hover:underline"
+                                    >
                                         {student.name}
-                                    </div>
+                                    </Link>
                                 </td>
 
                                 <td className="px-4 py-4 text-sm text-slate-600">

@@ -148,11 +148,11 @@ function VesselCard({ vessel }: { vessel: Vessel }) {
                     <div
                         className={[
                             'rounded-2xl px-5 py-4 text-white',
-                            vessel.is_active_simulator_vessel ? 'bg-emerald-700' : 'bg-slate-950',
+                            vessel.is_active_simulator_vessel ? 'bg-[#155F4C]' : 'bg-slate-950',
                         ].join(' ')}
                     >
                         <p className="text-xs uppercase tracking-[0.2em] text-white/50">
-                            {vessel.is_active_simulator_vessel ? 'Aktīvais kuģis' : 'Built'}
+                            {vessel.is_active_simulator_vessel ? 'Aktīvais kuģis' : 'Būvēts'}
                         </p>
                         <p className="mt-1 text-lg font-semibold">
                             {vessel.is_active_simulator_vessel ? 'Simulatorā' : vessel.built_year ?? '-'}
@@ -163,7 +163,7 @@ function VesselCard({ vessel }: { vessel: Vessel }) {
                         <button
                             type="button"
                             onClick={selectVessel}
-                            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                            className="inline-flex h-11 items-center justify-center rounded-xl bg-[#155F4C] px-4 text-sm font-semibold text-white transition hover:bg-[#1a6b5c]"
                         >
                             Izvēlēties simulatoram
                         </button>

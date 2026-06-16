@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Assignments\Services\AssignmentDeadlineService;
 use App\Domain\Stability\Services\StabilityAnalysisService;
 use App\Models\Assignment;
 use App\Models\Scenario;
@@ -15,8 +16,13 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, StabilityAnalysisService $analysisService): Response
-    {
+    public function __invoke(
+        Request $request,
+        StabilityAnalysisService $analysisService,
+        AssignmentDeadlineService $deadlineService,
+    ): Response {
+        $deadlineService->syncOverdueAssignments();
+
         $user = $request->user();
 
         if ($user->hasRole('admin')) {
@@ -39,7 +45,7 @@ class DashboardController extends Controller
             'analysis' => $analysis,
             'workspace' => $workspace,
             'studentDashboard' => $mode === 'student' ? $this->buildStudentDashboard($request) : null,
-            'teacherDashboard' => $mode === 'teacher' ? $this->buildTeacherDashboard() : null,
+            'teacherDashboard' => $mode === 'teacher' ? $this->buildTeacherDashboard($request) : null,
             'adminDashboard' => $mode === 'admin' ? $this->buildAdminDashboard() : null,
         ]);
     }
@@ -101,7 +107,8 @@ class DashboardController extends Controller
             'assignment_id' => $solution->assignment_id,
             'solution_id' => $solution->id,
             'status' => $solution->status,
-            'is_locked' => $solution->status !== 'in_progress',
+            'is_locked' => $solution->status !== 'in_progress'
+                || in_array($solution->assignment?->status, ['submitted', 'graded', 'overdue'], true),
             'scenario_title' => $solution->assignment?->scenario?->title,
             'score' => $solution->assignment?->submission?->score !== null
                 ? (float) $solution->assignment?->submission?->score
@@ -145,6 +152,7 @@ class DashboardController extends Controller
                 'in_progress' => $assignments->where('status', 'in_progress')->count(),
                 'submitted' => $assignments->where('status', 'submitted')->count(),
                 'graded' => $assignments->where('status', 'graded')->count(),
+                'overdue' => $assignments->where('status', 'overdue')->count(),
             ],
             'current_assignment' => $currentAssignment ? $this->mapStudentAssignment($currentAssignment) : null,
             'recent_assignments' => $assignments
@@ -155,15 +163,25 @@ class DashboardController extends Controller
         ];
     }
 
-    private function buildTeacherDashboard(): array
+    private function buildTeacherDashboard(Request $request): array
     {
+        $teacher = $request->user();
+
         $submissions = Submission::query()
             ->with([
                 'student',
                 'scenario.vessel',
             ])
+            ->whereHas(
+                'assignment',
+                fn ($query) => $query->where('assigned_by_user_id', $teacher->id),
+            )
             ->latest('submitted_at')
             ->latest('id')
+            ->get();
+
+        $scenarios = Scenario::query()
+            ->where('created_by_user_id', $teacher->id)
             ->get();
 
         $recentSubmissions = $submissions
@@ -182,8 +200,8 @@ class DashboardController extends Controller
                 'submissions_pending' => $submissions->where('status', 'submitted')->count(),
                 'submissions_graded' => $submissions->where('status', 'graded')->count(),
                 'average_score' => $averageScore ? round((float) $averageScore, 2) : null,
-                'scenarios_total' => Scenario::count(),
-                'scenarios_published' => Scenario::where('status', 'published')->count(),
+                'scenarios_total' => $scenarios->count(),
+                'scenarios_published' => $scenarios->where('status', 'published')->count(),
                 'vessels_total' => Vessel::where('status', 'active')->count(),
             ],
             'recent_submissions' => $recentSubmissions,

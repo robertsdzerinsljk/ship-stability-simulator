@@ -11,7 +11,7 @@ use App\Notifications\AssignmentGradedNotification;
 
 class TeacherSubmissionController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $submissions = Submission::query()
             ->with([
@@ -19,6 +19,13 @@ class TeacherSubmissionController extends Controller
                 'scenario.vessel',
                 'assignment',
             ])
+            ->when(
+                ! $request->user()->hasRole('admin'),
+                fn ($query) => $query->whereHas(
+                    'assignment',
+                    fn ($assignmentQuery) => $assignmentQuery->where('assigned_by_user_id', $request->user()->id),
+                ),
+            )
             ->latest('submitted_at')
             ->latest('id')
             ->get();
@@ -46,8 +53,14 @@ class TeacherSubmissionController extends Controller
         ]);
     }
 
-    public function show(Submission $submission): Response
+    public function show(Request $request, Submission $submission): Response
     {
+        abort_unless(
+            $request->user()->hasRole('admin')
+                || $submission->assignment?->assigned_by_user_id === $request->user()->id,
+            403,
+        );
+
         $submission->load([
             'student',
             'scenario.vessel',
@@ -99,6 +112,12 @@ class TeacherSubmissionController extends Controller
 
     public function grade(Request $request, Submission $submission): RedirectResponse
     {
+        abort_unless(
+            $request->user()->hasRole('admin')
+                || $submission->assignment?->assigned_by_user_id === $request->user()->id,
+            403,
+        );
+
         $validated = $request->validate([
             'score' => ['required', 'numeric', 'min:0', 'max:10'],
             'teacher_comment' => ['nullable', 'string', 'max:5000'],

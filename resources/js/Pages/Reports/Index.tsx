@@ -314,13 +314,31 @@ export default function ReportsIndex({ reportData }: ReportsIndexProps) {
                             </p>
                         </div>
 
-                        <a
-                            href="/reports/stability-summary/pdf"
-                            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                        >
-                            <Download className="h-5 w-5" />
-                            Lejupielādēt PDF
-                        </a>
+                        <div className="flex flex-wrap gap-2">
+                            <a
+                                href="/reports/stability-summary/pdf"
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                            >
+                                <Download className="h-5 w-5" />
+                                PDF
+                            </a>
+
+                            <a
+                                href="/reports/stability-summary/xlsx"
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            >
+                                <Download className="h-5 w-5" />
+                                XLSX
+                            </a>
+
+                            <a
+                                href="/reports/stability-summary/csv"
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            >
+                                <Download className="h-5 w-5" />
+                                CSV
+                            </a>
+                        </div>
                     </div>
                 </div>
 

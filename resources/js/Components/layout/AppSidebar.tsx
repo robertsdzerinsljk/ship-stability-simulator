@@ -3,6 +3,8 @@ import { type PageProps } from '@/types';
 import {
     Activity,
     BarChart3,
+    ChevronLeft,
+    ChevronRight,
     ClipboardCheck,
     ClipboardList,
     FileText,
@@ -12,10 +14,12 @@ import {
     PackageOpen,
     Settings,
     Ship,
+    Users,
     Waves,
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Role = 'student' | 'teacher' | 'admin';
 
@@ -31,6 +35,9 @@ type AppSidebarProps = {
     onClose?: () => void;
 };
 
+const fullLogoSrc = '/images/ljk-logo.png';
+const iconLogoSrc = '/images/ljk-logo-icon.svg';
+
 const navigation: NavItem[] = [
     {
         label: 'Pārskats',
@@ -45,15 +52,33 @@ const navigation: NavItem[] = [
         roles: ['student', 'admin'],
     },
     {
-        label: 'Kuģi',
-        href: '/vessels',
-        icon: Ship,
+        label: 'Studenti un grupas',
+        href: '/teacher/students',
+        icon: Users,
+        roles: ['teacher', 'admin'],
+    },
+    {
+        label: 'Uzdevumu piešķiršana',
+        href: '/teacher/assignments',
+        icon: ClipboardCheck,
+        roles: ['teacher', 'admin'],
+    },
+    {
+        label: 'Iesniegumi',
+        href: '/teacher/submissions',
+        icon: GraduationCap,
         roles: ['teacher', 'admin'],
     },
     {
         label: 'Scenāriji',
         href: '/scenarios',
         icon: ClipboardList,
+        roles: ['teacher', 'admin'],
+    },
+    {
+        label: 'Kuģi',
+        href: '/vessels',
+        icon: Ship,
         roles: ['teacher', 'admin'],
     },
     {
@@ -81,24 +106,6 @@ const navigation: NavItem[] = [
         roles: ['student', 'teacher', 'admin'],
     },
     {
-        label: 'Studenti un grupas',
-        href: '/teacher/students',
-        icon: GraduationCap,
-        roles: ['teacher', 'admin'],
-    },
-    {
-        label: 'Uzdevumu piešķiršana',
-        href: '/teacher/assignments',
-        icon: ClipboardCheck,
-        roles: ['teacher', 'admin'],
-    },
-    {
-        label: 'Iesniegumi',
-        href: '/teacher/submissions',
-        icon: GraduationCap,
-        roles: ['teacher', 'admin'],
-    },
-    {
         label: 'Analītika',
         href: '/teacher/analytics',
         icon: BarChart3,
@@ -120,11 +127,27 @@ function isActive(currentPath: string, href: string) {
     return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
+function getInitialCollapsedState() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.localStorage.getItem('app-sidebar-collapsed') === 'true';
+}
+
 export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
     const { url, props } = usePage<PageProps>();
     const currentPath = url.split('?')[0];
 
     const userRoles = props.auth?.user?.roles ?? [];
+    const [isCollapsed, setIsCollapsed] = useState(getInitialCollapsedState);
+
+    useEffect(() => {
+        const width = isCollapsed ? '5rem' : '18rem';
+
+        document.documentElement.style.setProperty('--app-sidebar-width', width);
+        window.localStorage.setItem('app-sidebar-collapsed', String(isCollapsed));
+    }, [isCollapsed]);
 
     const canSee = (item: NavItem) => {
         if (userRoles.includes('admin')) {
@@ -134,78 +157,150 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
         return item.roles.some((role) => userRoles.includes(role));
     };
 
-    const visibleNavigation = navigation.filter(canSee);
+    const visibleNavigation = useMemo(
+        () => navigation.filter(canSee),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [userRoles.join('|')],
+    );
 
-    const sidebarContent = (
-        <>
-            <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-                <Link href="/dashboard" className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                        <Ship className="h-5 w-5" />
-                    </div>
+    const renderLogo = (collapsed: boolean) => (
+        <Link
+            href="/dashboard"
+            className="relative flex h-full w-full items-center justify-center overflow-hidden"
+            title="Ship Stability Simulator"
+            onClick={onClose}
+        >
+            <img
+                src={fullLogoSrc}
+                alt="RTU Liepājas Jūrniecības koledža"
+                className={[
+                    'absolute h-16 w-auto max-w-[13.5rem] object-contain transition-all duration-300 ease-out',
+                    collapsed
+                        ? '-translate-x-4 scale-95 opacity-0 blur-sm'
+                        : 'translate-x-0 scale-100 opacity-100 blur-0',
+                ].join(' ')}
+            />
 
-                    <div>
-                        <p className="text-sm font-semibold text-slate-950">
-                            Ship Stability
-                        </p>
-                        <p className="text-xs text-slate-500">
-                            Simulator
-                        </p>
-                    </div>
-                </Link>
+            <img
+                src={iconLogoSrc}
+                alt="Liepājas Jūrniecības koledža"
+                className={[
+                    'absolute h-12 w-12 object-contain transition-all duration-300 ease-out',
+                    collapsed
+                        ? 'translate-x-0 scale-100 opacity-100 blur-0'
+                        : 'translate-x-4 scale-75 opacity-0 blur-sm',
+                ].join(' ')}
+            />
+        </Link>
+    );
 
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
-                    aria-label="Aizvērt izvēlni"
-                >
-                    <X className="h-5 w-5" />
-                </button>
-            </div>
+    const sidebarContent = (mobile = false) => {
+        const collapsed = !mobile && isCollapsed;
 
-            <nav className="flex-1 space-y-1 px-3 py-4">
-                {visibleNavigation.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(currentPath, item.href);
+        return (
+            <>
+                <div className="relative flex h-24 items-center justify-center border-b border-slate-200 px-4">
+                    {renderLogo(collapsed)}
 
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
+                    {mobile && (
+                        <button
+                            type="button"
                             onClick={onClose}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+                            aria-label="Aizvērt izvēlni"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
+                </div>
+
+                <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+                    {visibleNavigation.map((item) => {
+                        const Icon = item.icon;
+                        const active = isActive(currentPath, item.href);
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={onClose}
+                                title={collapsed ? item.label : undefined}
+                                className={[
+                                    'group flex items-center rounded-xl py-2.5 text-sm font-medium transition',
+                                    collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                                    active
+                                        ? 'bg-[#155f4c] text-white shadow-sm'
+                                        : 'text-slate-600 hover:bg-[#155f4c]/10 hover:text-[#155f4c]',
+                                ].join(' ')}
+                            >
+                                <Icon className="h-5 w-5 shrink-0" />
+
+                                <span
+                                    className={[
+                                        'whitespace-nowrap transition-all duration-200',
+                                        collapsed
+                                            ? 'w-0 overflow-hidden opacity-0'
+                                            : 'w-auto opacity-100',
+                                    ].join(' ')}
+                                >
+                                    {item.label}
+                                </span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                <div className="border-t border-slate-200 p-3">
+                    <Link
+                        href="/logout"
+                        method="post"
+                        as="button"
+                        title={collapsed ? 'Izrakstīties' : undefined}
+                        className={[
+                            'flex w-full items-center rounded-xl py-2.5 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-700',
+                            collapsed ? 'justify-center px-2' : 'gap-3 px-3',
+                        ].join(' ')}
+                    >
+                        <LogOut className="h-5 w-5 shrink-0" />
+                        <span
                             className={[
-                                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                               active
-    ? 'bg-[#155f4c] text-white shadow-sm'
-    : 'text-slate-600 hover:bg-[#155f4c]/10 hover:text-[#155f4c]'
+                                'whitespace-nowrap transition-all duration-200',
+                                collapsed
+                                    ? 'w-0 overflow-hidden opacity-0'
+                                    : 'w-auto opacity-100',
                             ].join(' ')}
                         >
-                            <Icon className="h-5 w-5" />
-                            <span>{item.label}</span>
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            <div className="border-t border-slate-200 p-3">
-                <Link
-                    href="/logout"
-                    method="post"
-                    as="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-700"
-                >
-                    <LogOut className="h-5 w-5" />
-                    <span>Izrakstīties</span>
-                </Link>
-            </div>
-        </>
-    );
+                            Izrakstīties
+                        </span>
+                    </Link>
+                </div>
+            </>
+        );
+    };
 
     return (
         <>
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white lg:flex">
-                {sidebarContent}
+            <aside
+                className={[
+                    'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-slate-200 bg-white transition-[width] duration-300 ease-out lg:flex',
+                    isCollapsed ? 'w-20' : 'w-72',
+                ].join(' ')}
+            >
+                <button
+                    type="button"
+                    onClick={() => setIsCollapsed((value) => !value)}
+                    className="absolute -right-3 top-28 z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-[#155f4c]/30 hover:text-[#155f4c] lg:inline-flex"
+                    aria-label={isCollapsed ? 'Izvērst sānu izvēlni' : 'Sakļaut sānu izvēlni'}
+                    title={isCollapsed ? 'Izvērst izvēlni' : 'Sakļaut izvēlni'}
+                >
+                    {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4" />
+                    ) : (
+                        <ChevronLeft className="h-4 w-4" />
+                    )}
+                </button>
+
+                {sidebarContent(false)}
             </aside>
 
             {isOpen && (
@@ -218,7 +313,7 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
                     />
 
                     <aside className="relative flex h-full w-72 flex-col bg-white shadow-xl">
-                        {sidebarContent}
+                        {sidebarContent(true)}
                     </aside>
                 </div>
             )}

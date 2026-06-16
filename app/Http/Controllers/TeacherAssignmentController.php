@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Assignments\Services\AssignmentDeadlineService;
 use App\Models\Assignment;
 use App\Models\Scenario;
 use App\Models\StudentGroup;
@@ -15,8 +16,11 @@ use Inertia\Response;
 
 class TeacherAssignmentController extends Controller
 {
-    public function index(): Response
+    public function index(AssignmentDeadlineService $deadlineService): Response
     {
+        $deadlineService->syncOverdueAssignments();
+        $teacher = request()->user();
+
         $assignments = Assignment::query()
             ->with([
                 'scenario.vessel',
@@ -25,6 +29,10 @@ class TeacherAssignmentController extends Controller
                 'studentGroup',
                 'submission',
             ])
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->where('assigned_by_user_id', $teacher->id),
+            )
             ->latest('assigned_at')
             ->latest('id')
             ->get();
@@ -68,6 +76,10 @@ class TeacherAssignmentController extends Controller
         $scenarios = Scenario::query()
             ->with('vessel')
             ->where('status', 'published')
+            ->when(
+                ! $teacher->hasRole('admin'),
+                fn ($query) => $query->where('created_by_user_id', $teacher->id),
+            )
             ->orderBy('title')
             ->get()
             ->map(fn (Scenario $scenario) => [
@@ -93,7 +105,7 @@ class TeacherAssignmentController extends Controller
                 'overdue' => $assignments->where('status', 'overdue')->count(),
                 'students' => $students->count(),
                 'groups' => $groups->count(),
-                
+
             ],
             'assignments' => $assignments
                 ->map(fn (Assignment $assignment) => $this->mapAssignment($assignment))
@@ -116,6 +128,10 @@ class TeacherAssignmentController extends Controller
 
         $scenario = Scenario::query()
             ->where('status', 'published')
+            ->when(
+                ! $request->user()->hasRole('admin'),
+                fn ($query) => $query->where('created_by_user_id', $request->user()->id),
+            )
             ->findOrFail($validated['scenario_id']);
 
         if ($validated['target_type'] === 'student') {

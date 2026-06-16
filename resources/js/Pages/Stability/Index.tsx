@@ -334,15 +334,15 @@ export default function StabilityIndex({ analysis }: StabilityIndexProps) {
 
                         <div
                             className={[
-                                'rounded-2xl px-5 py-4 text-white',
+                                'rounded-2xl px-5 py-4 text-[#B4530A] shadow',
                                 failedCriteria > 0
                                     ? 'bg-red-700'
                                     : warningCriteria > 0
-                                        ? 'bg-amber-600'
+                                        ? 'bg-[#FFFBEB]'
                                         : 'bg-emerald-700',
                             ].join(' ')}
                         >
-                            <p className="text-xs uppercase tracking-[0.2em] text-white/70">
+                            <p className="text-xs uppercase tracking-[0.2em] text-[#B4530A]/70">
                                 Kopējais statuss
                             </p>
                             <p className="mt-1 text-lg font-semibold">

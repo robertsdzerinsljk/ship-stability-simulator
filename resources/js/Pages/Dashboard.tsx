@@ -110,6 +110,7 @@ type StudentDashboard = {
         in_progress?: number | string | null;
         submitted?: number | string | null;
         graded?: number | string | null;
+        overdue?: number | string | null;
     };
     current_assignment?: StudentAssignment | null;
     recent_assignments?: StudentAssignment[];
@@ -213,6 +214,10 @@ function statusLabel(status?: string | null) {
         return 'Novērtēts';
     }
 
+    if (status === 'overdue') {
+        return 'Termiņš beidzies';
+    }
+
     return status ?? 'Nav statusa';
 }
 
@@ -250,7 +255,7 @@ function statusBadge(status?: string | null) {
     }
 
     if (status === 'overdue') {
-    return 'bg-red-50 text-red-700 ring-red-100';
+        return 'bg-red-50 text-red-700 ring-red-100';
     }
 
     return 'bg-slate-50 text-slate-700 ring-slate-100';
@@ -740,6 +745,7 @@ function StudentDashboardView({
         in_progress: 0,
         submitted: 0,
         graded: 0,
+        overdue: 0,
         ...studentDashboard?.stats,
     };
 
@@ -840,7 +846,7 @@ function StudentDashboardView({
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <StatCard
                     title="Kopā uzdevumi"
                     value={formatNumber(stats.total, 0)}
@@ -867,6 +873,13 @@ function StudentDashboardView({
                     value={formatNumber(stats.graded, 0)}
                     description="Darbi ar vērtējumu"
                     icon={CheckCircle2}
+                />
+
+                <StatCard
+                    title="Nokavēti"
+                    value={formatNumber(stats.overdue, 0)}
+                    description="Uzdevumi ar beigušos termiņu"
+                    icon={AlertTriangle}
                 />
             </div>
 

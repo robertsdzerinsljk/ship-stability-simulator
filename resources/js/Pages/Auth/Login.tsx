@@ -19,6 +19,9 @@ type LoginProps = {
     canResetPassword: boolean;
 };
 
+const fullLogoSrc = '/images/ljk-logo.png';
+const iconLogoSrc = '/images/ljk-logo-icon.svg';
+
 const slides = [
     {
         title: 'Kuģa stabilitātes simulators mācību procesam',
@@ -82,26 +85,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                         <div className="relative z-10 flex min-h-screen flex-col justify-between p-10 text-white xl:p-14">
                             <div className="flex items-center justify-between">
-                                <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 shadow-2xl shadow-black/20 backdrop-blur-md">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-950">
-                                        <Ship className="h-5 w-5" />
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm font-semibold leading-none">
-                                            Ship Stability Simulator
-                                        </p>
-                                        <p className="mt-1 text-xs text-white/65">
-                                            Maritime training platform
-                                        </p>
-                                    </div>
-                                </div>
 
                             </div>
 
                             <div className="mx-auto w-full max-w-3xl">
-                                <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur-md">
-                                    <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                                <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur-md">
                                     Liepājas Jūrniecības koledža
                                 </div>
 
@@ -169,7 +157,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </div>
 
                             <p className="text-sm text-white/45">
-                                © {new Date().getFullYear()} Ship Stability Simulator
+                                © {new Date().getFullYear()} Liepājas Jūrniecības koledža
                             </p>
                         </div>
                     </section>
@@ -179,8 +167,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                         <div className="relative w-full max-w-md">
                             <div className="mb-8 text-center lg:hidden">
-                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-xl">
-                                    <Ship className="h-8 w-8" />
+                                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-white p-3 shadow-xl ring-1 ring-slate-200">
+                                    <img
+                                        src={iconLogoSrc}
+                                        alt="Liepājas Jūrniecības koledža"
+                                        className="h-full w-full object-contain"
+                                    />
                                 </div>
 
                                 <h1 className="text-2xl font-bold text-slate-950">
@@ -194,27 +186,25 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                             <div className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-2xl shadow-slate-300/40 sm:p-9">
                                 <div className="mb-8">
-                                    <div className="mb-5 hidden items-center gap-3 lg:flex">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
-                                            <Ship className="h-6 w-6" />
+                                    <div className="mb-5 hidden items-center gap-4 lg:flex">
+                                        <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-white  ">
+                                            <img
+                                                src={fullLogoSrc}
+                                                alt="Liepājas Jūrniecības koledža"
+                                                className="h-full w-full object-contain"
+                                            />
                                         </div>
 
                                         <div>
-                                            <p className="text-lg font-bold text-slate-950">
-                                                Ship Stability Simulator
-                                            </p>
-                                            <p className="text-sm text-slate-500">
-                                                Pieslēgšanās sistēmai
-                                            </p>
                                         </div>
                                     </div>
 
-                                    <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-                                        Laipni lūdzam!
+                                    <h2 className="text-3xl font-bold tracking-tight text-slate-950 text-center">
+                                        Pieslēgšanās kontam
                                     </h2>
 
                                     <p className="mt-3 text-sm leading-6 text-slate-500">
-                                        Ievadi e-pastu un paroli, lai turpinātu darbu ar
+                                        Ievadiet e-pastu un paroli, lai turpinātu darbu ar
                                         kuģa stabilitātes simulatoru.
                                     </p>
                                 </div>
@@ -225,11 +215,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     </div>
                                 )}
 
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="mb-5 flex h-12 w-full cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-400"
-                                    title="Google pieslēgšanās tiks pieslēgta vēlāk"
+                                <a
+                                    href={route('auth.google.redirect')}
+                                    className="mb-5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                                 >
                                     <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                                         <path
@@ -249,8 +237,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"
                                         />
                                     </svg>
-                                    Google pieslēgšanās tiks pieslēgta vēlāk
-                                </button>
+                                    Turpināt ar Google
+                                </a>
 
                                 <div className="mb-5 flex items-center gap-3 text-xs font-medium text-slate-400">
                                     <div className="h-px flex-1 bg-slate-100" />
@@ -374,8 +362,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 </form>
 
                                 <div className="mt-7 border-t border-slate-100 pt-5 text-center text-sm text-slate-500">
-                                    Pagaidām izmanto lokālo kontu. Vēlāk šo aizstāsim ar
-                                    institucionālo Google pieslēgšanos.
+                                    Nav konta?{' '}
+                                    <Link
+                                        href={route('register')}
+                                        className="font-semibold text-emerald-800 hover:underline"
+                                    >
+                                        Reģistrēties ar LJK e-pastu
+                                    </Link>
                                 </div>
                             </div>
 

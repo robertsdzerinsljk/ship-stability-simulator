@@ -3,26 +3,33 @@
 use App\Http\Controllers\BallastController;
 use App\Http\Controllers\CargoPlanController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScenarioController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StabilityController;
+use App\Http\Controllers\StudentOnboardingController;
 use App\Http\Controllers\StudentTaskController;
 use App\Http\Controllers\TeacherAnalyticsController;
-use App\Http\Controllers\TeacherSubmissionController;
 use App\Http\Controllers\TeacherAssignmentController;
-use App\Http\Controllers\VesselController;
 use App\Http\Controllers\TeacherStudentController;
+use App\Http\Controllers\TeacherSubmissionController;
+use App\Http\Controllers\VesselController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\NotificationController;
-
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/onboarding/student-group', [StudentOnboardingController::class, 'edit'])
+        ->name('onboarding.student-group');
+    Route::post('/onboarding/student-group', [StudentOnboardingController::class, 'update'])
+        ->name('onboarding.student-group.update');
+});
+
+Route::middleware(['auth', 'verified', 'student.onboarded'])->group(function () {
     Route::middleware(['role.any:student,teacher,admin'])->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
@@ -35,8 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/ballast', [BallastController::class, 'index'])
             ->name('ballast.index');
 
-    Route::patch('/ballast/tanks/{tankId}', [BallastController::class, 'updateTank'])
-        ->name('ballast.tanks.update');
+        Route::patch('/ballast/tanks/{tankId}', [BallastController::class, 'updateTank'])
+            ->name('ballast.tanks.update');
 
         Route::get('/stability', StabilityController::class)
             ->name('stability.index');
@@ -46,6 +53,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/reports/stability-summary/pdf', [ReportController::class, 'downloadStabilitySummary'])
             ->name('reports.stability-summary.pdf');
+
+        Route::get('/reports/stability-summary/csv', [ReportController::class, 'downloadStabilitySummaryCsv'])
+            ->name('reports.stability-summary.csv');
+
+        Route::get('/reports/stability-summary/xlsx', [ReportController::class, 'downloadStabilitySummaryXlsx'])
+            ->name('reports.stability-summary.xlsx');
     });
 
     Route::middleware(['role.any:student,admin'])->group(function () {
@@ -94,16 +107,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/teacher/assignments', [TeacherAssignmentController::class, 'store'])->name('teacher.assignments.store');
 
         Route::get('/teacher/students', [TeacherStudentController::class, 'index'])->name('teacher.students.index');
+        Route::get('/teacher/students/{student}', [TeacherStudentController::class, 'show'])
+            ->name('teacher.students.show');
     });
 
     Route::middleware(['role.any:admin'])->group(function () {
-        Route::get('/settings', function () {
-            return Inertia::render('Settings/Index');
-        })->name('settings.index');
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('/settings/users', [SettingsController::class, 'storeUser'])
+            ->name('settings.users.store');
+        Route::patch('/settings/users/{user}/roles', [SettingsController::class, 'updateUserRoles'])
+            ->name('settings.users.roles.update');
+        Route::patch('/settings/users/{user}/group', [SettingsController::class, 'updateUserGroup'])
+            ->name('settings.users.group.update');
+        Route::delete('/settings/users/{user}', [SettingsController::class, 'destroyUser'])
+            ->name('settings.users.destroy');
+        Route::post('/settings/student-groups', [SettingsController::class, 'storeStudentGroup'])
+            ->name('settings.student-groups.store');
+        Route::patch('/settings/vessel-limits/{vesselLimit}', [SettingsController::class, 'updateVesselLimit'])
+            ->name('settings.vessel-limits.update');
+        Route::patch('/settings/cargo-types/{cargoType}', [SettingsController::class, 'updateCargoType'])
+            ->name('settings.cargo-types.update');
     });
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'student.onboarded'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 

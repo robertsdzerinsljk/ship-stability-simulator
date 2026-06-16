@@ -2,75 +2,110 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Assignments\Services\AssignmentDeadlineService;
+use App\Domain\Assignments\Services\AssignmentNotificationRecipientResolver;
+use App\Domain\Assignments\Services\AssignmentSolutionService;
 use App\Domain\Stability\Services\StabilityAnalysisService;
 use App\Models\Assignment;
 use App\Models\Scenario;
 use App\Models\Submission;
+use App\Notifications\AssignmentSubmittedNotification;
+use App\Support\ActiveAssignmentSolution;
+use App\Support\ActiveVessel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Support\ActiveVessel;
-use App\Domain\Assignments\Services\AssignmentSolutionService;
-use App\Support\ActiveAssignmentSolution;
-use App\Models\User;
-use App\Notifications\AssignmentSubmittedNotification;
-use Illuminate\Support\Facades\Notification;
 
 class StudentTaskController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, AssignmentDeadlineService $deadlineService): Response
     {
-    $assignments = Assignment::query()
-        ->with([
+        $deadlineService->syncOverdueAssignments();
+
+        $assignments = Assignment::query()
+            ->with([
+                'scenario.vessel',
+                'studentGroup',
+                'submission',
+            ])
+            ->where('user_id', $request->user()->id)
+            ->latest('assigned_at')
+            ->latest('id')
+            ->get();
+
+        return Inertia::render('StudentTasks/Index', [
+            'stats' => [
+                'total' => $assignments->count(),
+                'assigned' => $assignments->where('status', 'assigned')->count(),
+                'in_progress' => $assignments->where('status', 'in_progress')->count(),
+                'submitted' => $assignments->where('status', 'submitted')->count(),
+                'graded' => $assignments->where('status', 'graded')->count(),
+                'overdue' => $assignments->where('status', 'overdue')->count(),
+            ],
+            'assignments' => $assignments
+                ->map(fn (Assignment $assignment) => $this->mapStudentAssignment($assignment))
+                ->values(),
+        ]);
+    }
+
+    public function show(
+        Request $request,
+        Assignment $assignment,
+        StabilityAnalysisService $analysisService,
+        AssignmentDeadlineService $deadlineService,
+    ): Response {
+        abort_unless(
+            $assignment->user_id === $request->user()->id || $request->user()->hasRole('admin'),
+            403,
+        );
+
+        $deadlineService->syncOverdueAssignments();
+        $assignment->refresh();
+
+        $assignment->load([
             'scenario.vessel',
+            'scenario.cargoPlan.items.cargoType',
+            'scenario.cargoPlan.items.compartment',
+            'scenario.vessel.compartments',
+            'scenario.vessel.ballastTanks',
+            'scenario.vessel.limits',
             'studentGroup',
             'submission',
-        ])
-        ->where('user_id', $request->user()->id)
-        ->latest('assigned_at')
-        ->latest('id')
-        ->get();
+            'solution.vessel.compartments',
+            'solution.vessel.limits',
+            'solution.cargoPlan.items.cargoType',
+            'solution.cargoPlan.items.compartment',
+            'solution.ballastTanks',
+        ]);
 
-    return Inertia::render('StudentTasks/Index', [
-        'stats' => [
-            'total' => $assignments->count(),
-            'assigned' => $assignments->where('status', 'assigned')->count(),
-            'in_progress' => $assignments->where('status', 'in_progress')->count(),
-            'submitted' => $assignments->where('status', 'submitted')->count(),
-            'graded' => $assignments->where('status', 'graded')->count(),
-            'overdue' => $assignments->where('status', 'overdue')->count(),
-        ],
-        'assignments' => $assignments
-            ->map(fn (Assignment $assignment) => $this->mapStudentAssignment($assignment))
-            ->values(),
-    ]);
-}
-
-    public function show(Request $request, Assignment $assignment): Response
-{
-    abort_unless(
-        $assignment->user_id === $request->user()->id || $request->user()->hasRole('admin'),
-        403,
-    );
-
-    $assignment->load([
-        'scenario.vessel',
-        'studentGroup',
-        'submission',
-    ]);
-
-    return Inertia::render('StudentTasks/Show', [
-        'assignment' => $this->mapStudentAssignment($assignment),
-    ]);
-}
+        return Inertia::render('StudentTasks/Show', [
+            'assignment' => [
+                ...$this->mapStudentAssignment($assignment),
+                'solution_comparison' => $this->buildSolutionComparison($assignment, $analysisService),
+            ],
+        ]);
+    }
 
     public function start(
         Request $request,
         Assignment $assignment,
         AssignmentSolutionService $solutionService,
+        AssignmentDeadlineService $deadlineService,
     ): RedirectResponse {
         abort_unless($assignment->user_id === $request->user()->id, 403);
+
+        $deadlineService->syncOverdueAssignments();
+        $assignment->refresh();
+
+        if ($assignment->status === 'overdue') {
+            return back()->with('error', 'Uzdevuma termins ir beidzies. Sazinies ar pasniedzeju.');
+        }
+
+        if (in_array($assignment->status, ['submitted', 'graded'], true)) {
+            return back()->with('error', 'Uzdevums jau ir iesniegts un vairs nav labojams.');
+        }
 
         $assignment->load('scenario.vessel');
 
@@ -93,92 +128,96 @@ class StudentTaskController extends Controller
             ->with('success', 'Uzdevuma risināšana sākta. Izveidota privāta kravas un balasta kopija.');
     }
 
-public function submit(
-    Request $request,
-    Assignment $assignment,
-    StabilityAnalysisService $analysisService,
-    AssignmentSolutionService $solutionService,
-): RedirectResponse {
-    abort_unless($assignment->user_id === $request->user()->id, 403);
+    public function submit(
+        Request $request,
+        Assignment $assignment,
+        StabilityAnalysisService $analysisService,
+        AssignmentSolutionService $solutionService,
+        AssignmentDeadlineService $deadlineService,
+        AssignmentNotificationRecipientResolver $recipientResolver,
+    ): RedirectResponse {
+        abort_unless($assignment->user_id === $request->user()->id, 403);
 
-    $validated = $request->validate([
-        'student_comment' => ['nullable', 'string', 'max:3000'],
-    ]);
+        $deadlineService->syncOverdueAssignments();
+        $assignment->refresh();
 
-    $assignment->loadMissing([
-        'scenario',
-        'solution',
-    ]);
+        if ($assignment->status === 'overdue') {
+            return back()->with('error', 'Uzdevuma termins ir beidzies. Darbu vairs nevar iesniegt.');
+        }
 
-    $solution = $solutionService->startOrGet($assignment);
+        if (in_array($assignment->status, ['submitted', 'graded'], true)) {
+            return back()->with('error', 'Darbs jau ir iesniegts.');
+        }
 
-    $solution->load([
-        'vessel.compartments',
-        'vessel.limits',
-        'cargoPlan.items.cargoType',
-        'cargoPlan.items.compartment',
-        'ballastTanks',
-    ]);
+        $validated = $request->validate([
+            'student_comment' => ['nullable', 'string', 'max:3000'],
+        ]);
 
-    $scenario = $assignment->scenario;
-    $vessel = $solution->vessel;
-    $cargoPlan = $solution->cargoPlan;
+        $assignment->loadMissing([
+            'scenario',
+            'scenario.creator',
+            'solution',
+        ]);
 
-    $analysis = $analysisService->build(
-        $vessel,
-        $cargoPlan,
-        $solution->ballastTanks,
-    );
+        $solution = $solutionService->startOrGet($assignment);
 
-    $submission = Submission::updateOrCreate(
-        [
-            'assignment_id' => $assignment->id,
-        ],
-        [
-            'scenario_id' => $scenario->id,
-            'user_id' => $request->user()->id,
-            'cargo_plan_id' => $cargoPlan?->id,
+        $solution->load([
+            'vessel.compartments',
+            'vessel.limits',
+            'cargoPlan.items.cargoType',
+            'cargoPlan.items.compartment',
+            'ballastTanks',
+        ]);
+
+        $scenario = $assignment->scenario;
+        $vessel = $solution->vessel;
+        $cargoPlan = $solution->cargoPlan;
+
+        $analysis = $analysisService->build(
+            $vessel,
+            $cargoPlan,
+            $solution->ballastTanks,
+        );
+
+        $submission = Submission::updateOrCreate(
+            [
+                'assignment_id' => $assignment->id,
+            ],
+            [
+                'scenario_id' => $scenario->id,
+                'user_id' => $request->user()->id,
+                'cargo_plan_id' => $cargoPlan?->id,
+                'status' => 'submitted',
+                'stability_snapshot' => $analysis,
+                'student_comment' => $validated['student_comment'] ?? null,
+                'submitted_at' => now(),
+            ],
+        );
+
+        $assignment->update([
             'status' => 'submitted',
-            'stability_snapshot' => $analysis,
-            'student_comment' => $validated['student_comment'] ?? null,
             'submitted_at' => now(),
-        ],
-    );
+        ]);
 
-    $assignment->update([
-        'status' => 'submitted',
-        'submitted_at' => now(),
-    ]);
+        $solution->update([
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+        $assignment->loadMissing(['scenario.creator', 'assignedBy']);
 
-    $solution->update([
-        'status' => 'submitted',
-        'submitted_at' => now(),
-    ]);
-    $assignment->loadMissing(['scenario', 'assignedBy']);
+        Notification::send(
+            $recipientResolver->teacherRecipients($assignment),
+            new AssignmentSubmittedNotification(
+                assignment: $assignment,
+                submission: $submission,
+                student: $request->user(),
+            ),
+        );
 
-    $recipients = collect();
-
-    if ($assignment->assignedBy) {
-        $recipients->push($assignment->assignedBy);
+        return redirect()
+            ->route('student.tasks.show', $assignment)
+            ->with('success', 'Gala risinājums iesniegts.');
     }
-
-    if ($recipients->isEmpty()) {
-        $recipients = User::role(['teacher', 'admin'])->get();
-    }
-
-    Notification::send(
-        $recipients->unique('id')->values(),
-        new AssignmentSubmittedNotification(
-            assignment: $assignment,
-            submission: $submission,
-            student: $request->user(),
-        ),
-    );
-
-    return redirect()
-        ->route('student.tasks.show', $assignment)
-        ->with('success', 'Gala risinājums iesniegts.');
-}
 
     private function ensurePublishedScenariosAreAssignedToCurrentUser(Request $request): void
     {
@@ -252,54 +291,118 @@ public function submit(
 
         return $data;
     }
+
     private function mapStudentAssignment(Assignment $assignment): array
-{
-    $submission = $assignment->submission;
+    {
+        $submission = $assignment->submission;
 
-    return [
-        'id' => $assignment->id,
-        'status' => $assignment->status,
-        'assigned_at' => $assignment->assigned_at?->format('d.m.Y H:i'),
-        'started_at' => $assignment->started_at?->format('d.m.Y H:i'),
-        'submitted_at' => $assignment->submitted_at?->format('d.m.Y H:i'),
-        'due_at' => $assignment->due_at?->format('d.m.Y H:i'),
+        return [
+            'id' => $assignment->id,
+            'status' => $assignment->status,
+            'assigned_at' => $assignment->assigned_at?->format('d.m.Y H:i'),
+            'started_at' => $assignment->started_at?->format('d.m.Y H:i'),
+            'submitted_at' => $assignment->submitted_at?->format('d.m.Y H:i'),
+            'due_at' => $assignment->due_at?->format('d.m.Y H:i'),
 
-        'is_assigned' => $assignment->status === 'assigned',
-        'is_in_progress' => $assignment->status === 'in_progress',
-        'is_submitted' => in_array($assignment->status, ['submitted', 'graded'], true),
-        'is_graded' => $assignment->status === 'graded',
-        'is_overdue' => $assignment->status === 'overdue',
+            'is_assigned' => $assignment->status === 'assigned',
+            'is_in_progress' => $assignment->status === 'in_progress',
+            'is_submitted' => in_array($assignment->status, ['submitted', 'graded'], true),
+            'is_graded' => $assignment->status === 'graded',
+            'is_overdue' => $assignment->status === 'overdue',
 
-        'student_group' => $assignment->studentGroup ? [
-            'id' => $assignment->studentGroup->id,
-            'name' => $assignment->studentGroup->name,
-            'code' => $assignment->studentGroup->code,
-            'academic_year' => $assignment->studentGroup->academic_year,
-        ] : null,
+            'student_group' => $assignment->studentGroup ? [
+                'id' => $assignment->studentGroup->id,
+                'name' => $assignment->studentGroup->name,
+                'code' => $assignment->studentGroup->code,
+                'academic_year' => $assignment->studentGroup->academic_year,
+            ] : null,
 
-        'scenario' => [
-            'id' => $assignment->scenario?->id,
-            'title' => $assignment->scenario?->title ?? '-',
-            'description' => $assignment->scenario?->description ?? null,
-            'difficulty' => $assignment->scenario?->difficulty ?? '-',
-            'mode' => $assignment->scenario?->mode ?? '-',
-        ],
+            'scenario' => [
+                'id' => $assignment->scenario?->id,
+                'title' => $assignment->scenario?->title ?? '-',
+                'description' => $assignment->scenario?->description ?? null,
+                'difficulty' => $assignment->scenario?->difficulty ?? '-',
+                'mode' => $assignment->scenario?->mode ?? '-',
+                'task_text' => $assignment->scenario?->task_text,
+                'final_requirements' => $assignment->scenario?->final_requirements,
+                'student_hints' => $this->visibleStudentHints($assignment),
+                'show_hints' => (bool) $assignment->scenario?->show_hints,
+                'allow_solution_comparison' => (bool) $assignment->scenario?->allow_solution_comparison,
+            ],
 
-        'vessel' => [
-            'id' => $assignment->scenario?->vessel?->id,
-            'name' => $assignment->scenario?->vessel?->name ?? '-',
-            'type' => $assignment->scenario?->vessel?->type ?? '-',
-            'imo_number' => $assignment->scenario?->vessel?->imo_number ?? '-',
-        ],
+            'vessel' => [
+                'id' => $assignment->scenario?->vessel?->id,
+                'name' => $assignment->scenario?->vessel?->name ?? '-',
+                'type' => $assignment->scenario?->vessel?->type ?? '-',
+                'imo_number' => $assignment->scenario?->vessel?->imo_number ?? '-',
+            ],
 
-        'submission' => $submission ? [
-            'id' => $submission->id,
-            'status' => $submission->status,
-            'submitted_at' => $submission->created_at?->format('d.m.Y H:i'),
-            'score' => $submission->score !== null ? (float) $submission->score : null,
-            'teacher_comment' => $submission->teacher_comment,
-            'has_feedback' => $submission->score !== null || filled($submission->teacher_comment),
-        ] : null,
-    ];
+            'submission' => $submission ? [
+                'id' => $submission->id,
+                'status' => $submission->status,
+                'submitted_at' => $submission->created_at?->format('d.m.Y H:i'),
+                'score' => $submission->score !== null ? (float) $submission->score : null,
+                'teacher_comment' => $submission->teacher_comment,
+                'has_feedback' => $submission->score !== null || filled($submission->teacher_comment),
+            ] : null,
+        ];
+    }
+
+    private function visibleStudentHints(Assignment $assignment): ?string
+    {
+        $scenario = $assignment->scenario;
+
+        if (! $scenario || $scenario->mode !== 'training' || ! $scenario->show_hints) {
+            return null;
+        }
+
+        return $scenario->student_hints;
+    }
+
+    private function buildSolutionComparison(
+        Assignment $assignment,
+        StabilityAnalysisService $analysisService,
+    ): ?array {
+        $scenario = $assignment->scenario;
+        $solution = $assignment->solution;
+
+        if (
+            ! $scenario?->allow_solution_comparison
+            || ! in_array($assignment->status, ['submitted', 'graded'], true)
+            || ! $solution
+            || ! $scenario->cargoPlan
+        ) {
+            return null;
+        }
+
+        $recommended = $analysisService->build(
+            $scenario->vessel,
+            $scenario->cargoPlan,
+            $scenario->vessel->ballastTanks,
+        );
+
+        $student = $analysisService->build(
+            $solution->vessel,
+            $solution->cargoPlan,
+            $solution->ballastTanks,
+        );
+
+        return [
+            'recommended_metrics' => $this->comparisonMetrics($recommended['metrics'] ?? []),
+            'student_metrics' => $this->comparisonMetrics($student['metrics'] ?? []),
+        ];
+    }
+
+    private function comparisonMetrics(array $metrics): array
+    {
+        return [
+            'displacement' => $metrics['displacement'] ?? null,
+            'gm' => $metrics['gm'] ?? null,
+            'trim' => $metrics['trim'] ?? null,
+            'heel' => $metrics['heel'] ?? null,
+            'fore_draft' => $metrics['fore_draft'] ?? null,
+            'aft_draft' => $metrics['aft_draft'] ?? null,
+            'max_gz' => $metrics['max_gz'] ?? null,
+        ];
     }
 }

@@ -11,7 +11,7 @@ export default function Guest({ children }: PropsWithChildren) {
                     <img
                         src={fullLogoSrc}
                         alt="Liepajas Jurniecibas koledza"
-                        className="h-20 w-auto object-contain"
+                        className="mx-auto h-20 w-auto max-w-full object-contain sm:h-24"
                     />
                 </Link>
             </div>

@@ -20,7 +20,6 @@ type LoginProps = {
 };
 
 const fullLogoSrc = '/images/ljk-logo.png';
-const iconLogoSrc = '/images/ljk-logo-icon.svg';
 
 const slides = [
     {
@@ -170,9 +169,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                         <div className="relative w-full max-w-md">
                             <div className="mb-8 text-center lg:hidden">
-                                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-white p-3 shadow-xl ring-1 ring-slate-200">
+                                <div className="mx-auto mb-4 flex h-24 w-full max-w-[13rem] items-center justify-center rounded-3xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-200">
                                     <img
-                                        src={iconLogoSrc}
+                                        src={fullLogoSrc}
                                         alt="Liepājas Jūrniecības koledža"
                                         className="h-full w-full object-contain"
                                     />

@@ -10,7 +10,7 @@ export default function Register() {
         password: '',
         password_confirmation: '',
     });
-    const iconLogoSrc = '/images/ljk-logo-icon.svg';
+    const fullLogoSrc = '/images/ljk-logo.png';
 
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
@@ -53,7 +53,11 @@ export default function Register() {
                     <div className="mx-auto w-full max-w-md">
                         <div className="mb-2.5 text-center mt-12">
                             <div className="mx-auto mb-2 flex items-center justify-center rounded-xl">
-                                <img src={iconLogoSrc} alt="Logo" className="h-12 w-12" />
+                                <img
+                                    src={fullLogoSrc}
+                                    alt="Liepājas Jūrniecības koledža"
+                                    className="h-14 w-auto max-w-full object-contain sm:h-16"
+                                />
                             </div>
 
                             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-800">

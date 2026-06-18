@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\ApplicationRoles;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -11,9 +12,11 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        $studentRole = Role::firstOrCreate(['name' => 'student']);
-        $teacherRole = Role::firstOrCreate(['name' => 'teacher']);
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        ApplicationRoles::ensureDefaults();
+
+        $studentRole = Role::findByName(ApplicationRoles::STUDENT);
+        $teacherRole = Role::findByName(ApplicationRoles::TEACHER);
+        $adminRole = Role::findByName(ApplicationRoles::ADMIN);
 
         $student = User::firstOrCreate(
             ['email' => 'student@example.test'],

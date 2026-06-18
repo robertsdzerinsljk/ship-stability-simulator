@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\ApplicationRoles;
 use App\Support\InstitutionalEmail;
 use GuzzleHttp\Client;
 use Illuminate\Http\RedirectResponse;
@@ -54,6 +55,7 @@ class GoogleAuthController extends Controller
         $user->save();
 
         if (! $user->hasAnyRole(['student', 'teacher', 'admin'])) {
+            ApplicationRoles::ensureDefaults();
             $user->assignRole($role);
         }
 

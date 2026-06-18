@@ -36,7 +36,7 @@ type AppSidebarProps = {
 };
 
 const fullLogoSrc = '/images/ljk-logo.png';
-const iconLogoSrc = '/images/ljk-logo-icon.svg';
+const iconLogoSrc = '/images/LJK-LOGO-ICON.svg';
 
 const navigation: NavItem[] = [
     {
@@ -164,11 +164,7 @@ export default function AppSidebar({ isOpen = false, onClose }: AppSidebarProps)
     );
 
     const logout = () => {
-        router.post(route('logout'), {}, {
-            onSuccess: () => {
-                window.location.assign(route('login'));
-            },
-        });
+        router.post('/logout');
     };
 
     const renderLogo = (collapsed: boolean) => (

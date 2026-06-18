@@ -141,7 +141,7 @@ function ChartCard({
                 </p>
             </div>
 
-            <div className="h-80">
+            <div className="h-[24rem]">
                 {children}
             </div>
         </div>
@@ -243,9 +243,9 @@ export default function TeacherAnalyticsIndex({
                         description="Cik uzdevumi ir piešķirti, procesā, iesniegti un novērtēti."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={assignmentStatusStats}>
+                            <BarChart data={assignmentStatusStats} margin={{ top: 10, right: 24, left: 12, bottom: 24 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="label" />
+                                <XAxis dataKey="label" height={42} tickMargin={8} />
                                 <YAxis allowDecimals={false} />
                                 <Tooltip />
                                 <Bar dataKey="count" name="Skaits" fill="#0f172a" />
@@ -258,9 +258,9 @@ export default function TeacherAnalyticsIndex({
                         description="Cik iesniegumi ietilpst katrā vērtējumu intervālā."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={scoreDistribution}>
+                            <BarChart data={scoreDistribution} margin={{ top: 10, right: 24, left: 12, bottom: 24 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="range" />
+                                <XAxis dataKey="range" height={42} tickMargin={8} />
                                 <YAxis allowDecimals={false} />
                                 <Tooltip />
                                 <Bar dataKey="count" name="Iesniegumi" fill="#047857" />
@@ -275,7 +275,7 @@ export default function TeacherAnalyticsIndex({
                         description="Biežākie warning un fail statusi stabilitātes kritērijos."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={criteriaStats.slice(0, 8)}>
+                            <BarChart data={criteriaStats.slice(0, 8)} margin={{ top: 10, right: 24, left: 12, bottom: 32 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="name"
@@ -284,10 +284,11 @@ export default function TeacherAnalyticsIndex({
                                     angle={-20}
                                     textAnchor="end"
                                     height={90}
+                                    tickMargin={8}
                                 />
                                 <YAxis allowDecimals={false} />
                                 <Tooltip />
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={28} />
                                 <Bar dataKey="warning" name="Warning" fill="#d97706" />
                                 <Bar dataKey="fail" name="Fail" fill="#dc2626" />
                             </BarChart>
@@ -299,7 +300,7 @@ export default function TeacherAnalyticsIndex({
                         description="Iesniegumu skaits un vidējais vērtējums pēc kuģa tipa."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={vesselTypeStats}>
+                            <BarChart data={vesselTypeStats} margin={{ top: 10, right: 24, left: 12, bottom: 32 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="type"
@@ -308,10 +309,11 @@ export default function TeacherAnalyticsIndex({
                                     angle={-15}
                                     textAnchor="end"
                                     height={70}
+                                    tickMargin={8}
                                 />
                                 <YAxis />
                                 <Tooltip />
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={28} />
                                 <Bar dataKey="submissions" name="Iesniegumi" fill="#2563eb" />
                                 <Bar dataKey="average_score" name="Vidējais vērtējums" fill="#7c3aed" />
                             </BarChart>

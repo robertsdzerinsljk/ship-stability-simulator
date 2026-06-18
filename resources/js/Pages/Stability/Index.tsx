@@ -181,7 +181,7 @@ function ChartCard({
                 <p className="mt-1 text-sm text-slate-500">{description}</p>
             </div>
 
-            <div className="h-80">
+            <div className="h-[24rem]">
                 {children}
             </div>
         </div>
@@ -426,17 +426,18 @@ export default function StabilityIndex({ analysis }: StabilityIndexProps) {
                         description="Vienkāršota stabilitātes līkne salīdzinājumā ar mācību kritērija līniju."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={analysis.charts.gz_curve}>
+                            <LineChart data={analysis.charts.gz_curve} margin={{ top: 10, right: 24, left: 12, bottom: 42 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="angle"
+                                    height={50}
                                     label={{ value: 'Leņķis (°)', position: 'insideBottom', offset: -5 }}
                                 />
                                 <YAxis
                                     label={{ value: 'GZ (m)', angle: -90, position: 'insideLeft' }}
                                 />
                                 <Tooltip />
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={28} />
                                 <Line
                                     type="monotone"
                                     dataKey="gz"
@@ -467,15 +468,16 @@ export default function StabilityIndex({ analysis }: StabilityIndexProps) {
                         description="Vienkāršots šķērspēka sadalījums gar kuģa garumu."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={analysis.charts.shear_force}>
+                            <LineChart data={analysis.charts.shear_force} margin={{ top: 10, right: 24, left: 12, bottom: 42 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="station"
+                                    height={50}
                                     label={{ value: 'Stacija gar kuģi (m)', position: 'insideBottom', offset: -5 }}
                                 />
                                 <YAxis />
                                 <Tooltip />
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={28} />
                                 <Line
                                     type="monotone"
                                     dataKey="shear"
@@ -509,15 +511,16 @@ export default function StabilityIndex({ analysis }: StabilityIndexProps) {
                         description="Vienkāršots lieces momenta sadalījums, kas palīdz redzēt korpusa slodzes tendenci."
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={analysis.charts.bending_moment}>
+                            <LineChart data={analysis.charts.bending_moment} margin={{ top: 10, right: 24, left: 12, bottom: 42 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="station"
+                                    height={50}
                                     label={{ value: 'Stacija gar kuģi (m)', position: 'insideBottom', offset: -5 }}
                                 />
                                 <YAxis />
                                 <Tooltip />
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={28} />
                                 <Line
                                     type="monotone"
                                     dataKey="moment"

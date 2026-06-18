@@ -507,7 +507,7 @@ function ScenarioList({ scenarios }: { scenarios: Scenario[] }) {
                                 <td className="px-4 py-4">
                                     <span
                                         className={[
-                                            'rounded-full px-3 py-1 text-xs font-medium ring-1',
+                                            'inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ring-1',
                                             scenario.mode === 'exam'
                                                 ? 'bg-red-50 text-red-700 ring-red-100'
                                                 : 'bg-blue-50 text-blue-700 ring-blue-100',

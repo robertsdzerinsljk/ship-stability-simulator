@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\ApplicationRoles;
 use App\Support\InstitutionalEmail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,7 @@ class RegisteredUserController extends Controller
             'auth_provider' => 'local',
         ]);
 
+        ApplicationRoles::ensureDefaults();
         $user->assignRole($role);
 
         event(new Registered($user));

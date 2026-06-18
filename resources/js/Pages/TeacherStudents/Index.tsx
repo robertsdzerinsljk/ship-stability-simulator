@@ -144,7 +144,7 @@ function GroupsSection({ groups }: { groups: StudentGroup[] }) {
                 </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-3">
                 {groups.map((group) => (
                     <div
                         key={group.id}
@@ -172,8 +172,8 @@ function GroupsSection({ groups }: { groups: StudentGroup[] }) {
                             </p>
                         )}
 
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            {(group.students ?? []).slice(0, 8).map((student) => (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {(group.students ?? []).slice(0, 6).map((student) => (
                                 <span
                                     key={student.id}
                                     className="rounded-full bg-slate-50 px-3 py-1 text-xs text-slate-600 ring-1 ring-slate-100"
@@ -182,9 +182,9 @@ function GroupsSection({ groups }: { groups: StudentGroup[] }) {
                                 </span>
                             ))}
 
-                            {(group.students ?? []).length > 8 && (
+                            {(group.students ?? []).length > 6 && (
                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                                    +{(group.students ?? []).length - 8}
+                                    +{(group.students ?? []).length - 6}
                                 </span>
                             )}
                         </div>
@@ -210,7 +210,7 @@ function GroupsSection({ groups }: { groups: StudentGroup[] }) {
                 ))}
 
                 {groups.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 lg:col-span-2">
+                    <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
                         Nav atrasta neviena klase vai grupa. Palaid StudentGroupSeeder.
                     </div>
                 )}

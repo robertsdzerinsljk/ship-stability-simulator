@@ -3,6 +3,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { type PageProps } from '@/types';
 import type { LucideIcon } from 'lucide-react';
 import {
+    ChevronDown,
+    ChevronUp,
     Database,
     Gauge,
     Save,
@@ -425,7 +427,7 @@ function CreateGroupForm() {
         <form onSubmit={submit} className="rounded-2xl border border-slate-200 p-4">
             <h3 className="mb-4 font-semibold text-slate-950">Pievienot grupu</h3>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_0.7fr_0.7fr_0.6fr_auto]">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <input
                     value={form.name}
                     onChange={(event) => setForm({ ...form, name: event.target.value })}
@@ -458,7 +460,7 @@ function CreateGroupForm() {
                 <button
                     type="submit"
                     disabled={saving}
-                    className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:col-span-2 xl:col-span-4 xl:w-fit"
                 >
                     {saving ? 'Veido...' : 'Izveidot'}
                 </button>
@@ -658,6 +660,9 @@ export default function SettingsIndex({
     const limitRows = Array.isArray(vesselLimits) ? vesselLimits : [];
     const cargoRows = Array.isArray(cargoTypes) ? cargoTypes : [];
     const validationError = props.errors ? Object.values(props.errors)[0] : null;
+    const [showAllUsers, setShowAllUsers] = useState(false);
+    const visibleUserRows = showAllUsers ? userRows : userRows.slice(0, 8);
+    const hiddenUserCount = Math.max(userRows.length - visibleUserRows.length, 0);
 
     return (
         <AuthenticatedLayout
@@ -724,7 +729,7 @@ export default function SettingsIndex({
 
                     <div className="mb-4 rounded-2xl border border-slate-200 p-4">
                         <h3 className="mb-3 font-semibold text-slate-950">Aktīvās grupas</h3>
-                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid gap-2 md:grid-cols-2">
                             {groupRows.map((group) => (
                                 <div key={group.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-100">
                                     <span className="font-semibold text-slate-950">{group.name}</span>
@@ -735,8 +740,32 @@ export default function SettingsIndex({
                         </div>
                     </div>
 
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 className="font-semibold text-slate-950">Lietotāju saraksts</h3>
+                            <p className="text-sm text-slate-500">
+                                Rādīti {visibleUserRows.length} no {userRows.length} lietotājiem.
+                            </p>
+                        </div>
+
+                        {userRows.length > 8 && (
+                            <button
+                                type="button"
+                                onClick={() => setShowAllUsers((value) => !value)}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                            >
+                                {showAllUsers ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                )}
+                                {showAllUsers ? 'Sakļaut sarakstu' : `Rādīt visus (${hiddenUserCount})`}
+                            </button>
+                        )}
+                    </div>
+
                     <div className="grid gap-3">
-                        {userRows.map((user) => (
+                        {visibleUserRows.map((user) => (
                             <div key={user.id} className="rounded-2xl border border-slate-200 p-4">
                                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                                     <div className="flex-1">

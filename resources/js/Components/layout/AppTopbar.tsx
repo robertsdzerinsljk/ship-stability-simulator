@@ -14,7 +14,14 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { type PageProps } from '@/types';
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    FormEvent,
+    KeyboardEvent,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 
 type Role = 'student' | 'teacher' | 'admin';
 
@@ -35,6 +42,12 @@ type SharedPageProps = PageProps<{
             name?: string;
             email?: string;
             roles?: string[];
+            student_group?: {
+                id?: number;
+                name?: string;
+                code?: string | null;
+                academic_year?: string | null;
+            } | null;
         } | null;
     };
     notifications?: {
@@ -181,6 +194,7 @@ export default function AppTopbar({
     const user = props.auth?.user;
     const roles = Array.isArray(user?.roles) ? user.roles : [];
     const mainRole = roles[0];
+    const studentGroup = user?.student_group;
 
     const notifications = props.notifications?.items ?? [];
     const unreadCount = Number(props.notifications?.unread_count ?? 0);
@@ -226,7 +240,10 @@ export default function AppTopbar({
                 setSearchOpen(false);
             }
 
-            if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+            if (
+                notificationsRef.current &&
+                !notificationsRef.current.contains(target)
+            ) {
                 setNotificationsOpen(false);
             }
         };
@@ -369,7 +386,9 @@ export default function AppTopbar({
                     <div ref={notificationsRef} className="relative">
                         <button
                             type="button"
-                            onClick={() => setNotificationsOpen((current) => !current)}
+                            onClick={() =>
+                                setNotificationsOpen((current) => !current)
+                            }
                             className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
                             aria-label="Paziņojumi"
                         >
@@ -390,7 +409,8 @@ export default function AppTopbar({
                                             Paziņojumi
                                         </p>
                                         <p className="mt-0.5 text-xs text-slate-500">
-                                            Jauni iesniegumi, vērtējumi un termiņi.
+                                            Jauni iesniegumi, vērtējumi un
+                                            termiņi.
                                         </p>
                                     </div>
 
@@ -410,10 +430,14 @@ export default function AppTopbar({
                                         <button
                                             key={notification.id}
                                             type="button"
-                                            onClick={() => openNotification(notification)}
+                                            onClick={() =>
+                                                openNotification(notification)
+                                            }
                                             className={[
                                                 'block w-full rounded-xl px-3 py-3 text-left transition hover:bg-slate-50',
-                                                notification.read_at ? 'opacity-70' : 'bg-[#155f4c]/5',
+                                                notification.read_at
+                                                    ? 'opacity-70'
+                                                    : 'bg-[#155f4c]/5',
                                             ].join(' ')}
                                         >
                                             <p className="text-sm font-semibold text-slate-950">
@@ -453,6 +477,14 @@ export default function AppTopbar({
                             <p className="max-w-36 truncate text-xs text-slate-500">
                                 {roleLabel(mainRole)}
                             </p>
+                            {studentGroup && roles.includes('student') && (
+                                <p className="max-w-36 truncate text-xs font-medium text-[#155f4c]">
+                                    {studentGroup.name}
+                                    {studentGroup.academic_year
+                                        ? ` · ${studentGroup.academic_year}`
+                                        : ''}
+                                </p>
+                            )}
                         </div>
                     </Link>
                 </div>

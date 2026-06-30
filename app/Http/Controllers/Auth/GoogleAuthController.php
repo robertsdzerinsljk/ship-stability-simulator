@@ -8,6 +8,7 @@ use App\Support\ApplicationRoles;
 use App\Support\InstitutionalEmail;
 use GuzzleHttp\Client;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -15,9 +16,15 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
 {
-    public function redirect(): RedirectResponse
+    public function redirect(Request $request): RedirectResponse
     {
-        return $this->googleDriver()->redirect();
+        $driver = $this->googleDriver();
+
+        if ($request->boolean('select_account')) {
+            $driver->with(['prompt' => 'select_account']);
+        }
+
+        return $driver->redirect();
     }
 
     public function callback(): RedirectResponse

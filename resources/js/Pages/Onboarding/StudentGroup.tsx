@@ -1,57 +1,43 @@
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useMemo, useState } from 'react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { FormEvent } from 'react';
 
-type StudentGroup = {
-    id: number;
-    name: string;
-    code?: string | null;
-    academic_year?: string | null;
+type UserSummary = {
+    name?: string | null;
+    email?: string | null;
 };
 
 type Props = {
     academicYears?: string[];
-    groups?: StudentGroup[];
+    groupCodes?: string[];
+    user?: UserSummary | null;
 };
 
 export default function StudentGroupOnboarding({
     academicYears,
-    groups,
+    groupCodes,
+    user,
 }: Props) {
     const years = Array.isArray(academicYears) ? academicYears : [];
-    const groupRows = Array.isArray(groups) ? groups : [];
-    const [groupMode, setGroupMode] = useState<'existing' | 'new'>(
-        groupRows.length > 0 ? 'existing' : 'new',
-    );
+    const codes = Array.isArray(groupCodes) ? groupCodes : [];
 
     const { data, setData, post, processing, errors } = useForm({
-        academic_year: years[0] ?? '',
-        group_mode: groupMode,
-        student_group_id: '',
+        academic_year: '',
         group_code: '',
     });
-
-    const filteredGroups = useMemo(
-        () =>
-            groupRows.filter(
-                (group) => group.academic_year === data.academic_year,
-            ),
-        [data.academic_year, groupRows],
-    );
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
 
-        post(route('onboarding.student-group.update'));
+        post('/onboarding/student-group');
     };
 
-    const setMode = (mode: 'existing' | 'new') => {
-        setGroupMode(mode);
-        setData('group_mode', mode);
+    const logout = () => {
+        router.post('/logout');
     };
 
     return (
-        <GuestLayout>
+        <GuestLayout logoHref="/login">
             <Head title="Grupas izvēle" />
 
             <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
@@ -68,6 +54,32 @@ export default function StudentGroupOnboarding({
                     </p>
                 </div>
 
+                {user && (
+                    <div className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                Pierakstījies kā
+                            </p>
+                            <p className="mt-1 truncate text-sm font-semibold text-slate-950">
+                                {user.name || user.email}
+                            </p>
+                            {user.email && (
+                                <p className="truncate text-xs text-slate-500">
+                                    {user.email}
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={logout}
+                            className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                            Izrakstīties
+                        </button>
+                    </div>
+                )}
+
                 <form onSubmit={submit} className="space-y-5">
                     <label className="block">
                         <span className="text-sm font-medium text-slate-700">
@@ -75,16 +87,15 @@ export default function StudentGroupOnboarding({
                         </span>
                         <select
                             value={data.academic_year}
-                            onChange={(event) => {
-                                setData({
-                                    ...data,
-                                    academic_year: event.target.value,
-                                    student_group_id: '',
-                                });
-                            }}
+                            onChange={(event) =>
+                                setData('academic_year', event.target.value)
+                            }
                             className="mt-2 h-12 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
                             required
                         >
+                            <option value="" disabled>
+                                Izvēlies mācību gadu
+                            </option>
                             {years.map((year) => (
                                 <option key={year} value={year}>
                                     {year}
@@ -98,93 +109,41 @@ export default function StudentGroupOnboarding({
                         )}
                     </label>
 
-                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
-                        <button
-                            type="button"
-                            onClick={() => setMode('existing')}
-                            className={[
-                                'h-10 rounded-lg text-sm font-semibold transition',
-                                groupMode === 'existing'
-                                    ? 'bg-white text-slate-950 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800',
-                            ].join(' ')}
+                    <label className="block">
+                        <span className="text-sm font-medium text-slate-700">
+                            Grupa
+                        </span>
+                        <select
+                            value={data.group_code}
+                            onChange={(event) =>
+                                setData('group_code', event.target.value)
+                            }
+                            className="mt-2 h-12 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
+                            required
                         >
-                            Esoša grupa
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode('new')}
-                            className={[
-                                'h-10 rounded-lg text-sm font-semibold transition',
-                                groupMode === 'new'
-                                    ? 'bg-white text-slate-950 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800',
-                            ].join(' ')}
-                        >
-                            Jauna grupa
-                        </button>
-                    </div>
-
-                    {groupMode === 'existing' ? (
-                        <label className="block">
-                            <span className="text-sm font-medium text-slate-700">
-                                Grupa
-                            </span>
-                            <select
-                                value={data.student_group_id}
-                                onChange={(event) =>
-                                    setData(
-                                        'student_group_id',
-                                        event.target.value,
-                                    )
-                                }
-                                className="mt-2 h-12 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
-                                required
-                            >
-                                <option value="">Izvēlies grupu</option>
-                                {filteredGroups.map((group) => (
-                                    <option key={group.id} value={group.id}>
-                                        {group.name} · {group.academic_year}
-                                    </option>
-                                ))}
-                            </select>
-                            {filteredGroups.length === 0 && (
-                                <p className="mt-2 text-sm text-slate-500">
-                                    Šim mācību gadam vēl nav grupu. Izveido
-                                    jaunu zem blakus izvēles.
-                                </p>
-                            )}
-                            {errors.student_group_id && (
-                                <p className="mt-2 text-sm text-red-600">
-                                    {errors.student_group_id}
-                                </p>
-                            )}
-                        </label>
-                    ) : (
-                        <label className="block">
-                            <span className="text-sm font-medium text-slate-700">
-                                Grupas kods
-                            </span>
-                            <input
-                                value={data.group_code}
-                                onChange={(event) =>
-                                    setData('group_code', event.target.value)
-                                }
-                                placeholder="Piemēram, S-21"
-                                className="mt-2 h-12 w-full rounded-xl border border-slate-300 px-3 text-sm uppercase outline-none transition placeholder:normal-case focus:border-emerald-700 focus:ring-4 focus:ring-emerald-700/10"
-                                required
-                            />
-                            {errors.group_code && (
-                                <p className="mt-2 text-sm text-red-600">
-                                    {errors.group_code}
-                                </p>
-                            )}
-                        </label>
-                    )}
+                            <option value="" disabled>
+                                Izvēlies grupu
+                            </option>
+                            {codes.map((code) => (
+                                <option key={code} value={code}>
+                                    {code}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.group_code && (
+                            <p className="mt-2 text-sm text-red-600">
+                                {errors.group_code}
+                            </p>
+                        )}
+                    </label>
 
                     <button
                         type="submit"
-                        disabled={processing}
+                        disabled={
+                            processing ||
+                            !data.academic_year ||
+                            !data.group_code
+                        }
                         className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-800 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                         {processing ? 'Saglabā...' : 'Turpināt'}

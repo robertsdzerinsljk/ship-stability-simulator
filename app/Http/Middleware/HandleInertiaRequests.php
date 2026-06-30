@@ -30,6 +30,10 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $studentGroup = $user?->studentGroups()
+            ->orderByDesc('student_group_user.joined_at')
+            ->orderBy('student_groups.name')
+            ->first();
 
         return [
             ...parent::share($request),
@@ -40,6 +44,12 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'roles' => $user->getRoleNames()->values()->toArray(),
+                    'student_group' => $studentGroup ? [
+                        'id' => $studentGroup->id,
+                        'name' => $studentGroup->name,
+                        'code' => $studentGroup->code,
+                        'academic_year' => $studentGroup->academic_year,
+                    ] : null,
                 ] : null,
             ],
 
@@ -48,26 +58,26 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'notifications' => fn () => $request->user() ? [
-            'unread_count' => $request->user()->unreadNotifications()->count(),
-            'items' => $request->user()
-                ->notifications()
-                ->latest()
-                ->limit(8)
-                ->get()
-                ->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'title' => $notification->data['title'] ?? 'Paziņojums',
-                    'message' => $notification->data['message'] ?? '',
-                    'href' => $notification->data['href'] ?? '/dashboard',
-                    'type' => $notification->data['type'] ?? 'general',
-                    'read_at' => $notification->read_at?->format('d.m.Y H:i'),
-                    'created_at' => $notification->created_at?->diffForHumans(),
-                ])
-                ->values(),
-        ] : [
-    'unread_count' => 0,
-    'items' => [],
-],
+                'unread_count' => $request->user()->unreadNotifications()->count(),
+                'items' => $request->user()
+                    ->notifications()
+                    ->latest()
+                    ->limit(8)
+                    ->get()
+                    ->map(fn ($notification) => [
+                        'id' => $notification->id,
+                        'title' => $notification->data['title'] ?? 'Paziņojums',
+                        'message' => $notification->data['message'] ?? '',
+                        'href' => $notification->data['href'] ?? '/dashboard',
+                        'type' => $notification->data['type'] ?? 'general',
+                        'read_at' => $notification->read_at?->format('d.m.Y H:i'),
+                        'created_at' => $notification->created_at?->diffForHumans(),
+                    ])
+                    ->values(),
+            ] : [
+                'unread_count' => 0,
+                'items' => [],
+            ],
         ];
     }
 }

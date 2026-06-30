@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentGroup;
+use App\Support\StudentGroupCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,18 +24,11 @@ class StudentOnboardingController extends Controller
 
         return Inertia::render('Onboarding/StudentGroup', [
             'academicYears' => $this->academicYears(),
-            'groups' => StudentGroup::query()
-                ->where('status', 'active')
-                ->orderByDesc('academic_year')
-                ->orderBy('name')
-                ->get()
-                ->map(fn (StudentGroup $group) => [
-                    'id' => $group->id,
-                    'name' => $group->name,
-                    'code' => $group->code,
-                    'academic_year' => $group->academic_year,
-                ])
-                ->values(),
+            'groupCodes' => StudentGroupCatalog::codes(),
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
         ]);
     }
 
@@ -46,33 +40,24 @@ class StudentOnboardingController extends Controller
 
         $validated = $request->validate([
             'academic_year' => ['required', 'string', 'max:20'],
-            'group_mode' => ['required', Rule::in(['existing', 'new'])],
-            'student_group_id' => ['nullable', 'required_if:group_mode,existing', 'exists:student_groups,id'],
-            'group_code' => ['nullable', 'required_if:group_mode,new', 'string', 'max:30'],
+            'group_code' => ['required', 'string', Rule::in(StudentGroupCatalog::codes())],
         ]);
 
-        if ($validated['group_mode'] === 'existing') {
-            $group = StudentGroup::query()
-                ->where('status', 'active')
-                ->where('academic_year', $validated['academic_year'])
-                ->findOrFail($validated['student_group_id']);
-        } else {
-            $code = mb_strtoupper(trim($validated['group_code']));
+        $code = trim($validated['group_code']);
 
-            $group = StudentGroup::query()->firstOrCreate(
-                [
-                    'name' => $code,
-                    'academic_year' => $validated['academic_year'],
-                ],
-                [
-                    'created_by_user_id' => $user->id,
-                    'code' => $code,
-                    'type' => 'class',
-                    'external_source' => 'local',
-                    'status' => 'active',
-                ],
-            );
-        }
+        $group = StudentGroup::query()->firstOrCreate(
+            [
+                'name' => $code,
+                'academic_year' => $validated['academic_year'],
+            ],
+            [
+                'created_by_user_id' => $user->id,
+                'code' => $code,
+                'type' => 'class',
+                'external_source' => 'self_registration',
+                'status' => 'active',
+            ],
+        );
 
         $user->studentGroups()->syncWithoutDetaching([
             $group->id => [

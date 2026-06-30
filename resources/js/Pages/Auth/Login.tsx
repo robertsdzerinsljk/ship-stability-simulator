@@ -1,5 +1,5 @@
 import { FormEventHandler, useEffect, useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     Anchor,
     Boxes,
@@ -10,16 +10,42 @@ import {
     Lock,
     Mail,
     Ship,
-    ShieldCheck,
     Waves,
 } from 'lucide-react';
 
 type LoginProps = {
     status?: string;
     canResetPassword: boolean;
+    authenticatedUser?: {
+        name?: string | null;
+        email?: string | null;
+    } | null;
 };
 
 const fullLogoSrc = '/images/ljk-logo.png';
+
+function GoogleIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+                fill="#FBBC05"
+                d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"
+            />
+            <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"
+            />
+        </svg>
+    );
+}
 
 const slides = [
     {
@@ -39,7 +65,11 @@ const slides = [
     },
 ];
 
-export default function Login({ status, canResetPassword }: LoginProps) {
+export default function Login({
+    status,
+    canResetPassword,
+    authenticatedUser,
+}: LoginProps) {
     const [activeSlide, setActiveSlide] = useState(0);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -65,6 +95,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         });
     };
 
+    const logout = () => {
+        router.post('/logout');
+    };
+
     const ActiveIcon = slides[activeSlide].icon;
 
     return (
@@ -83,9 +117,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         </div>
 
                         <div className="relative z-10 flex min-h-screen flex-col justify-between p-10 text-white xl:p-14">
-                            <div className="flex items-center justify-between">
-
-                            </div>
+                            <div className="flex items-center justify-between"></div>
 
                             <div className="mx-auto w-full max-w-3xl">
                                 <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/85 backdrop-blur-md">
@@ -103,7 +135,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                                 Simulator
                                             </p>
                                             <p className="mt-1 text-sm text-white/70">
-                                                Krava • Balasts • Stabilitāte • Atskaites
+                                                Krava • Balasts • Stabilitāte •
+                                                Atskaites
                                             </p>
                                         </div>
                                     </div>
@@ -121,7 +154,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             <button
                                                 key={slide.title}
                                                 type="button"
-                                                onClick={() => setActiveSlide(index)}
+                                                onClick={() =>
+                                                    setActiveSlide(index)
+                                                }
                                                 className={[
                                                     'h-3 rounded-full transition-all',
                                                     index === activeSlide
@@ -137,26 +172,39 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <div className="mt-8 grid grid-cols-3 gap-4">
                                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
                                         <Waves className="mb-3 h-5 w-5 text-sky-200" />
-                                        <p className="text-sm font-semibold">Balasts</p>
-                                        <p className="mt-1 text-xs text-white/60">Tanku korekcija</p>
+                                        <p className="text-sm font-semibold">
+                                            Balasts
+                                        </p>
+                                        <p className="mt-1 text-xs text-white/60">
+                                            Tanku korekcija
+                                        </p>
                                     </div>
 
                                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
                                         <Anchor className="mb-3 h-5 w-5 text-emerald-200" />
-                                        <p className="text-sm font-semibold">GM / Trims</p>
-                                        <p className="mt-1 text-xs text-white/60">Drošības aprēķini</p>
+                                        <p className="text-sm font-semibold">
+                                            GM / Trims
+                                        </p>
+                                        <p className="mt-1 text-xs text-white/60">
+                                            Drošības aprēķini
+                                        </p>
                                     </div>
 
                                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md">
                                         <CheckCircle2 className="mb-3 h-5 w-5 text-lime-200" />
-                                        <p className="text-sm font-semibold">Atskaites</p>
-                                        <p className="mt-1 text-xs text-white/60">PDF rezultāti</p>
+                                        <p className="text-sm font-semibold">
+                                            Atskaites
+                                        </p>
+                                        <p className="mt-1 text-xs text-white/60">
+                                            PDF rezultāti
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
                             <p className="text-sm text-white/45">
-                                © {new Date().getFullYear()} Liepājas Jūrniecības koledža
+                                © {new Date().getFullYear()} Liepājas
+                                Jūrniecības koledža
                             </p>
                         </div>
                     </section>
@@ -194,8 +242,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             />
                                         </div>
 
-                                        <div>
-                                        </div>
+                                        <div></div>
                                     </div>
 
                                     <h2 className="text-3xl font-bold tracking-tight text-slate-950 text-center">
@@ -203,8 +250,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     </h2>
 
                                     <p className="mt-3 text-sm leading-6 text-slate-500">
-                                        Ievadiet e-pastu un paroli, lai turpinātu darbu ar
-                                        kuģa stabilitātes simulatoru.
+                                        Ievadiet e-pastu un paroli, lai
+                                        turpinātu darbu ar kuģa stabilitātes
+                                        simulatoru.
                                     </p>
                                 </div>
 
@@ -214,30 +262,57 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     </div>
                                 )}
 
-                                <a
-                                    href={route('auth.google.redirect')}
-                                    className="mb-5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path
-                                            fill="#4285F4"
-                                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                        />
-                                        <path
-                                            fill="#34A853"
-                                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                        />
-                                        <path
-                                            fill="#FBBC05"
-                                            d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"
-                                        />
-                                        <path
-                                            fill="#EA4335"
-                                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"
-                                        />
-                                    </svg>
-                                    Turpināt ar Google
-                                </a>
+                                {authenticatedUser && (
+                                    <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                                                <GoogleIcon className="h-5 w-5" />
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-semibold text-slate-950">
+                                                    Pierakstījies kā{' '}
+                                                    {authenticatedUser.name ||
+                                                        authenticatedUser.email}
+                                                </p>
+                                                {authenticatedUser.email && (
+                                                    <p className="mt-1 truncate text-xs text-slate-500">
+                                                        {
+                                                            authenticatedUser.email
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                                            <Link
+                                                href="/dashboard"
+                                                className="flex h-10 items-center justify-center rounded-xl bg-emerald-800 text-sm font-semibold text-white transition hover:bg-emerald-900"
+                                            >
+                                                Turpināt
+                                            </Link>
+
+                                            <button
+                                                type="button"
+                                                onClick={logout}
+                                                className="flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                                            >
+                                                Izvēlēties citu kontu
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!authenticatedUser && (
+                                    <a
+                                        href={`${route('auth.google.redirect')}?select_account=1`}
+                                        className="mb-5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <GoogleIcon className="h-5 w-5" />
+                                        Turpināt ar Google
+                                    </a>
+                                )}
 
                                 <div className="mb-5 flex items-center gap-3 text-xs font-medium text-slate-400">
                                     <div className="h-px flex-1 bg-slate-100" />
@@ -263,7 +338,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                                 name="email"
                                                 value={data.email}
                                                 onChange={(event) =>
-                                                    setData('email', event.target.value)
+                                                    setData(
+                                                        'email',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 required
                                                 autoFocus
@@ -304,11 +382,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                                             <input
                                                 id="password"
-                                                type={showPassword ? 'text' : 'password'}
+                                                type={
+                                                    showPassword
+                                                        ? 'text'
+                                                        : 'password'
+                                                }
                                                 name="password"
                                                 value={data.password}
                                                 onChange={(event) =>
-                                                    setData('password', event.target.value)
+                                                    setData(
+                                                        'password',
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 required
                                                 autoComplete="current-password"
@@ -318,9 +403,17 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                                             <button
                                                 type="button"
-                                                onClick={() => setShowPassword((value) => !value)}
+                                                onClick={() =>
+                                                    setShowPassword(
+                                                        (value) => !value,
+                                                    )
+                                                }
                                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
-                                                aria-label={showPassword ? 'Paslēpt paroli' : 'Rādīt paroli'}
+                                                aria-label={
+                                                    showPassword
+                                                        ? 'Paslēpt paroli'
+                                                        : 'Rādīt paroli'
+                                                }
                                             >
                                                 {showPassword ? (
                                                     <EyeOff className="h-5 w-5" />
@@ -343,11 +436,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             name="remember"
                                             checked={data.remember}
                                             onChange={(event) =>
-                                                setData('remember', event.target.checked)
+                                                setData(
+                                                    'remember',
+                                                    event.target.checked,
+                                                )
                                             }
                                             className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
                                         />
-
                                         Atcerēties mani
                                     </label>
 
@@ -356,7 +451,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                         disabled={processing}
                                         className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-800 text-base font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
                                     >
-                                        {processing ? 'Pieslēdzas...' : 'Pieslēgties'}
+                                        {processing
+                                            ? 'Pieslēdzas...'
+                                            : 'Pieslēgties'}
                                     </button>
                                 </form>
 
@@ -372,7 +469,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </div>
 
                             <p className="mt-6 text-center text-xs text-slate-400">
-                                Stabilitātes, kravas izvietojuma un balasta mācību simulators
+                                Stabilitātes, kravas izvietojuma un balasta
+                                mācību simulators
                             </p>
                         </div>
                     </section>
